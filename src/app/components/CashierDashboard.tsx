@@ -1,0 +1,133 @@
+import React, { useState } from 'react';
+import { motion } from 'motion/react';
+import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight } from 'lucide-react';
+import { useAppContext } from './AppContext';
+import type { Order } from './data';
+
+const statusColors: Record<string, { bg: string; text: string; border: string }> = {
+  pending: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D' },
+  preparing: { bg: '#E3F2FD', text: '#1565C0', border: '#64B5F6' },
+  ready: { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784' },
+  completed: { bg: '#F5F5F5', text: '#757575', border: '#E0E0E0' },
+};
+
+const statusIcons: Record<string, React.ElementType> = {
+  pending: Clock,
+  preparing: ChefHat,
+  ready: Coffee,
+  completed: CheckCircle2,
+};
+
+const nextStatus: Record<string, Order['status'] | null> = {
+  pending: 'preparing',
+  preparing: 'ready',
+  ready: 'completed',
+  completed: null,
+};
+
+const filterTabs = ['All', 'Pending', 'Preparing', 'Ready', 'Completed'];
+
+export function CashierDashboard() {
+  const { orders, updateOrderStatus } = useAppContext();
+  const [activeFilter, setActiveFilter] = useState('All');
+
+  const filtered = activeFilter === 'All'
+    ? orders
+    : orders.filter(o => o.status === activeFilter.toLowerCase());
+
+  return (
+    <div className="px-4 pt-10 pb-6">
+      <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Cashier Dashboard</h1>
+      <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Manage incoming orders</p>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 no-scrollbar">
+        {filterTabs.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveFilter(tab)}
+            className={`px-4 py-2 rounded-[20px] text-[13px] whitespace-nowrap cursor-pointer transition-all ${
+              activeFilter === tab
+                ? 'bg-[#362415] text-white'
+                : 'bg-[#F5F5F5] text-[#757575]'
+            }`}
+            style={{ fontWeight: activeFilter === tab ? 600 : 400 }}
+          >
+            {tab}
+            {tab !== 'All' && (
+              <span className="ml-1.5 text-[11px] opacity-70">
+                ({orders.filter(o => o.status === tab.toLowerCase()).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Order Cards */}
+      <div className="space-y-3">
+        {filtered.map((order, i) => {
+          const colors = statusColors[order.status];
+          const Icon = statusIcons[order.status];
+          const next = nextStatus[order.status];
+
+          return (
+            <motion.div
+              key={order.id}
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className="rounded-[16px] bg-white p-4 border"
+              style={{ borderColor: 'rgba(0,0,0,0.06)', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[15px] text-[#362415]" style={{ fontWeight: 700 }}>#{order.id}</h3>
+                    <span
+                      className="flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-[20px]"
+                      style={{ background: colors.bg, color: colors.text, fontWeight: 600 }}
+                    >
+                      <Icon size={12} />
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                  </div>
+                  <p className="text-[13px] text-[#757575] mt-0.5">{order.customerName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[14px] text-[#00704A]" style={{ fontWeight: 700 }}>&#8369;{order.total}</p>
+                  <p className="text-[11px] text-[#757575]">{order.time}</p>
+                </div>
+              </div>
+
+              <div className="bg-[#F5F5F5] rounded-[10px] p-2.5 mb-3">
+                {order.items.map(item => (
+                  <div key={item.id} className="flex justify-between text-[13px] py-0.5">
+                    <span className="text-[#362415]">{item.quantity}x {item.name} ({item.size})</span>
+                  </div>
+                ))}
+                <p className="text-[11px] text-[#757575] mt-1">{order.orderType}</p>
+              </div>
+
+              {next && (
+                <button
+                  onClick={() => updateOrderStatus(order.id, next)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[12px] text-white text-[14px] cursor-pointer"
+                  style={{ background: '#00704A', fontWeight: 600 }}
+                >
+                  Mark as {next.charAt(0).toUpperCase() + next.slice(1)}
+                  <ArrowRight size={16} />
+                </button>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-[#757575] text-[14px]">No orders in this category</p>
+        </div>
+      )}
+    </div>
+  );
+}
