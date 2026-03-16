@@ -1,3 +1,6 @@
+import type { Order } from '../types/order';
+import type { Branch, CartItem, Product, SizeOz } from '../types/menu';
+
 export const COLORS = {
   primary: '#00704A',
   secondary: '#362415',
@@ -22,43 +25,6 @@ export const IMAGES = {
   coldBrew: 'https://images.unsplash.com/photo-1611477948234-a3c27435c72b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb2xkJTIwYnJldyUyMGNvZmZlZSUyMGdsYXNzfGVufDF8fHx8MTc3MjY2NTM2OXww&ixlib=rb-4.1.0&q=80&w=1080',
 };
 
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  category: string;
-  description: string;
-  brand: 'lehmuhn' | 'kohfee';
-}
-
-export interface CartItem extends Product {
-  quantity: number;
-  size: string;
-  sugarLevel: string;
-  toppings: string[];
-  addOns: string[];
-}
-
-export interface Branch {
-  id: string;
-  name: string;
-  address: string;
-  hours: string;
-  available: boolean;
-  brand: 'lehmuhn' | 'kohfee';
-}
-
-export interface Order {
-  id: string;
-  items: CartItem[];
-  total: number;
-  status: 'pending' | 'preparing' | 'ready' | 'completed';
-  time: string;
-  customerName: string;
-  orderType: string;
-}
-
 export const branches: Branch[] = [
   { id: '1', name: 'SM City Cebu', address: 'North Reclamation Area, Cebu City', hours: '8:00 AM - 9:00 PM', available: true, brand: 'lehmuhn' },
   { id: '2', name: 'Ayala Center', address: 'Cebu Business Park, Cebu City', hours: '9:00 AM - 10:00 PM', available: true, brand: 'lehmuhn' },
@@ -69,53 +35,391 @@ export const branches: Branch[] = [
 ];
 
 export const products: Product[] = [
-  { id: '1', name: 'Classic Lemonade', price: 89, image: IMAGES.lemonJuice, category: 'Juices', description: 'Freshly squeezed lemons with a hint of sweetness', brand: 'lehmuhn' },
-  { id: '2', name: 'Mango Sunrise', price: 109, image: IMAGES.mango, category: 'Juices', description: 'Fresh Philippine mangoes blended to perfection', brand: 'lehmuhn' },
-  { id: '3', name: 'Citrus Burst', price: 99, image: IMAGES.citrus, category: 'Juices', description: 'A refreshing mix of orange, lemon, and calamansi', brand: 'lehmuhn' },
-  { id: '4', name: 'Iced Lemon Tea', price: 79, image: IMAGES.icedTea, category: 'Tea', description: 'Cold brewed tea with fresh lemon slices', brand: 'lehmuhn' },
-  { id: '5', name: 'Matcha Latte', price: 129, image: IMAGES.matcha, category: 'Tea', description: 'Premium Japanese matcha with creamy milk', brand: 'lehmuhn' },
-  { id: '6', name: 'Classic Espresso', price: 99, image: IMAGES.espresso, category: 'Hot Coffee', description: 'Rich, bold espresso shot from Arabica beans', brand: 'kohfee' },
-  { id: '7', name: 'Caf\u00e9 Latte', price: 129, image: IMAGES.latte, category: 'Hot Coffee', description: 'Smooth espresso with steamed milk and microfoam', brand: 'kohfee' },
-  { id: '8', name: 'Caramel Frapp\u00e9', price: 149, image: IMAGES.frappe, category: 'Blended', description: 'Icy caramel blended coffee with whipped cream', brand: 'kohfee' },
-  { id: '9', name: 'Mocha Delight', price: 139, image: IMAGES.mocha, category: 'Hot Coffee', description: 'Chocolate and espresso in perfect harmony', brand: 'kohfee' },
-  { id: '10', name: 'Cold Brew', price: 119, image: IMAGES.coldBrew, category: 'Iced Coffee', description: '24-hour slow-steeped coffee, smooth and bold', brand: 'kohfee' },
+  {
+    id: 'lm-just-lehmuhn',
+    storeId: 'lehmuhn',
+    name: 'Just Leh-muhn',
+    description: 'Classic cold blend with lemon, chia, and nata de coco.',
+    basePrice: 69,
+    priceBySizeOz: { 16: 69, 22: 89 },
+    image: IMAGES.lemonJuice,
+    drinkType: 'COLD',
+    isPremium: false,
+    defaultToppingsLabel: 'Lemon + Chia + Nata de coco',
+    defaultToppingsCost: 15,
+  },
+  {
+    id: 'lm-hot-healthy',
+    storeId: 'lehmuhn',
+    name: 'Hot and Healthy Leh-muhn',
+    description: 'Warm wellness cup with selectable infusion profile.',
+    basePrice: 99,
+    priceBySizeOz: { 12: 99 },
+    image: IMAGES.citrus,
+    drinkType: 'HOT',
+    hotOptions: ['Honey', 'Ginger', 'Pure lemon', 'Lemongrass'],
+    isPremium: false,
+  },
+  {
+    id: 'lm-premium-cold',
+    storeId: 'lehmuhn',
+    name: 'Premium Leh-muhn',
+    description: 'Premium cold line with rotating flavor list.',
+    basePrice: 89,
+    priceBySizeOz: { 16: 89, 22: 109 },
+    image: IMAGES.citrus,
+    drinkType: 'COLD',
+    isPremium: true,
+    defaultToppingsLabel: 'Premium fruit mix',
+    defaultToppingsCost: 15,
+  },
+  {
+    id: 'lm-blended-strawberry',
+    storeId: 'lehmuhn',
+    name: 'Blended Strawberry Leh-muhn',
+    description: 'Strawberry forward blended Leh-muhn.',
+    basePrice: 135,
+    priceBySizeOz: { 16: 135 },
+    image: IMAGES.mango,
+    drinkType: 'BLENDED',
+    isPremium: false,
+  },
+  {
+    id: 'lm-blended-mixed-berries',
+    storeId: 'lehmuhn',
+    name: 'Blended Mixed Berries Leh-muhn',
+    description: 'Balanced berry blend with tart finish.',
+    basePrice: 135,
+    priceBySizeOz: { 16: 135 },
+    image: IMAGES.mango,
+    drinkType: 'BLENDED',
+    isPremium: false,
+  },
+  {
+    id: 'lm-blended-cranberry',
+    storeId: 'lehmuhn',
+    name: 'Blended Cranberry Leh-muhn',
+    description: 'Cranberry-heavy blend with bright citrus notes.',
+    basePrice: 135,
+    priceBySizeOz: { 16: 135 },
+    image: IMAGES.mango,
+    drinkType: 'BLENDED',
+    isPremium: false,
+  },
+  {
+    id: 'lm-blended-raspberry',
+    storeId: 'lehmuhn',
+    name: 'Blended Raspberry Leh-muhn',
+    description: 'Raspberry infused blended series favorite.',
+    basePrice: 135,
+    priceBySizeOz: { 16: 135 },
+    image: IMAGES.mango,
+    drinkType: 'BLENDED',
+    isPremium: false,
+  },
+  {
+    id: 'lm-sparkling',
+    storeId: 'lehmuhn',
+    name: 'Sparkling Leh-muhn',
+    description: 'Crisp sparkling Leh-muhn with citrus sparkle.',
+    basePrice: 89,
+    priceBySizeOz: { 16: 89, 22: 109 },
+    image: IMAGES.icedTea,
+    drinkType: 'SPARKLING',
+    isPremium: false,
+  },
+  {
+    id: 'lm-float',
+    storeId: 'lehmuhn',
+    name: 'Leh-muhn Float',
+    description: 'Sparkling base with creamy float cap.',
+    basePrice: 119,
+    priceBySizeOz: { 16: 119, 22: 129 },
+    image: IMAGES.icedTea,
+    drinkType: 'SPARKLING',
+    isPremium: false,
+  },
+  {
+    id: 'lm-sparkling-matcha',
+    storeId: 'lehmuhn',
+    name: 'Sparkling Leh-muhn Matcha',
+    description: 'Sparkling Leh-muhn with matcha finish.',
+    basePrice: 119,
+    priceBySizeOz: { 16: 119, 22: 129 },
+    image: IMAGES.matcha,
+    drinkType: 'SPARKLING',
+    isPremium: false,
+  },
+  {
+    id: 'lm-carrot-fresh-juice',
+    storeId: 'lehmuhn',
+    name: 'Carrot Fresh Juice Combo',
+    description: 'Health is wealth series. Choose 2 fruits over carrot + honey base.',
+    basePrice: 119,
+    priceBySizeOz: { 16: 119, 22: 129 },
+    image: IMAGES.citrus,
+    drinkType: 'COLD',
+    requiresFruitSelection: {
+      min: 2,
+      max: 2,
+      options: ['Apple', 'Watermelon', 'Orange', 'Lemon'],
+    },
+    isPremium: false,
+  },
+  {
+    id: 'kf-americano',
+    storeId: 'kohfee',
+    name: 'Americano',
+    description: 'Bold espresso diluted for a clean finish.',
+    basePrice: 109,
+    image: IMAGES.espresso,
+    menuGroup: 'HOT',
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-vietnamese-egg',
+    storeId: 'kohfee',
+    name: 'Vietnamese Egg Coffee',
+    description: 'Silky whipped egg crema over robust coffee.',
+    basePrice: 149,
+    image: IMAGES.latte,
+    menuGroup: 'HOT',
+    allowedMenuGroups: ['HOT'],
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: true,
+  },
+  {
+    id: 'kf-cafe-latte',
+    storeId: 'kohfee',
+    name: 'Cafe Latte',
+    description: 'Steamed milk and espresso with smooth body.',
+    basePrice: 129,
+    image: IMAGES.latte,
+    menuGroup: 'HOT',
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-iced-latte',
+    storeId: 'kohfee',
+    name: 'Iced Latte',
+    description: 'Cold milk and espresso over ice.',
+    basePrice: 139,
+    image: IMAGES.latte,
+    menuGroup: 'COLD',
+    allowedMenuGroups: ['COLD'],
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-cold-brew',
+    storeId: 'kohfee',
+    name: 'Cold Brew',
+    description: '24-hour steeped coffee, smooth and chocolatey.',
+    basePrice: 129,
+    image: IMAGES.coldBrew,
+    menuGroup: 'COLD',
+    allowedMenuGroups: ['COLD'],
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-caramel-frappe',
+    storeId: 'kohfee',
+    name: 'Caramel Frappe',
+    description: 'Coffee blended over ice with caramel drizzle.',
+    basePrice: 149,
+    image: IMAGES.frappe,
+    menuGroup: 'BLENDED',
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-mocha-frappe',
+    storeId: 'kohfee',
+    name: 'Mocha Frappe',
+    description: 'Chocolate coffee blend with creamy texture.',
+    basePrice: 159,
+    image: IMAGES.mocha,
+    menuGroup: 'BLENDED',
+    subGroup: 'COFFEE',
+    isFood: false,
+    isPremium: true,
+  },
+  {
+    id: 'kf-signature-matcha',
+    storeId: 'kohfee',
+    name: 'Signature Matcha',
+    description: 'Earthy matcha in creamy hot format.',
+    basePrice: 139,
+    image: IMAGES.matcha,
+    menuGroup: 'HOT',
+    subGroup: 'NON_COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-iced-choco',
+    storeId: 'kohfee',
+    name: 'Iced Chocolate',
+    description: 'Rich cocoa drink served iced.',
+    basePrice: 129,
+    image: IMAGES.mocha,
+    menuGroup: 'COLD',
+    allowedMenuGroups: ['COLD'],
+    subGroup: 'NON_COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-berry-smoothie',
+    storeId: 'kohfee',
+    name: 'Berry Smoothie',
+    description: 'Mixed berry non-coffee blended drink.',
+    basePrice: 149,
+    image: IMAGES.citrus,
+    menuGroup: 'BLENDED',
+    subGroup: 'NON_COFFEE',
+    isFood: false,
+    isPremium: false,
+  },
+  {
+    id: 'kf-grilled-cheese',
+    storeId: 'kohfee',
+    name: 'Grilled Cheese Sandwich',
+    description: 'Toasted sandwich with melted cheese blend.',
+    basePrice: 139,
+    image: IMAGES.shop,
+    menuGroup: 'FOOD',
+    isFood: true,
+    isPremium: false,
+  },
+  {
+    id: 'kf-chicken-pesto',
+    storeId: 'kohfee',
+    name: 'Chicken Pesto Panini',
+    description: 'Savory chicken panini with pesto spread.',
+    basePrice: 179,
+    image: IMAGES.shop,
+    menuGroup: 'FOOD',
+    isFood: true,
+    isPremium: false,
+  },
+  {
+    id: 'kf-croissant',
+    storeId: 'kohfee',
+    name: 'Butter Croissant',
+    description: 'Flaky French-style pastry.',
+    basePrice: 89,
+    image: IMAGES.shop,
+    menuGroup: 'FOOD',
+    isFood: true,
+    isPremium: false,
+  },
+  {
+    id: 'kf-brownie',
+    storeId: 'kohfee',
+    name: 'Fudge Brownie',
+    description: 'Dense chocolate brownie bar.',
+    basePrice: 79,
+    image: IMAGES.shop,
+    menuGroup: 'FOOD',
+    isFood: true,
+    isPremium: false,
+  },
 ];
+
+export function getPriceForSize(product: Product, selectedSizeOz?: SizeOz): number {
+  if (!selectedSizeOz) {
+    return product.basePrice;
+  }
+
+  return product.priceBySizeOz?.[selectedSizeOz] ?? product.basePrice;
+}
+
+export function getCartItemUnitPrice(item: CartItem): number {
+  const addOnsTotal = item.addOns.reduce((sum, addOn) => sum + addOn.extraCost, 0);
+  const toppingsTotal = item.toppingsRemoved ? 0 : (item.toppingsCost ?? 0);
+
+  return item.basePrice + addOnsTotal + toppingsTotal;
+}
+
+export function getCartItemLineTotal(item: CartItem): number {
+  return getCartItemUnitPrice(item) * item.quantity;
+}
+
+const sampleOrderItem: CartItem = {
+  cartItemId: 'sample-lm-just-16',
+  productId: 'lm-just-lehmuhn',
+  storeId: 'lehmuhn',
+  name: 'Just Leh-muhn',
+  description: 'Classic cold blend with lemon, chia, and nata de coco.',
+  image: IMAGES.lemonJuice,
+  basePrice: 69,
+  quantity: 1,
+  isPremium: false,
+  selectedSizeOz: 16,
+  selectedDrinkType: 'COLD',
+  addOns: [],
+  toppingsRemoved: false,
+  toppingsLabel: 'Lemon + Chia + Nata de coco',
+  toppingsCost: 15,
+};
 
 export const sampleOrders: Order[] = [
   {
     id: 'BJC-001',
-    items: [{ ...products[7], quantity: 2, size: 'Large', sugarLevel: '75%', toppings: ['Whipped Cream'], addOns: ['Extra Shot'] }],
-    total: 338,
-    status: 'pending',
+    items: [{ ...sampleOrderItem, cartItemId: 'sample-lm-1', quantity: 2 }],
+    total: 168,
+    status: 'waiting_for_arrival',
     time: '10:30 AM',
     customerName: 'Maria Santos',
     orderType: 'Advance Order',
+    paymentMethod: 'PAY_AT_STORE',
+    paymentStatus: 'UNPAID',
+    statusMessage: 'Prepare once you arrived in the store',
   },
   {
     id: 'BJC-002',
-    items: [{ ...products[6], quantity: 1, size: 'Medium', sugarLevel: '100%', toppings: [], addOns: [] }],
-    total: 129,
+    items: [{ ...sampleOrderItem, cartItemId: 'sample-lm-2', quantity: 1, basePrice: 109, selectedSizeOz: 22 }],
+    total: 109,
     status: 'preparing',
     time: '10:45 AM',
     customerName: 'Juan Dela Cruz',
     orderType: 'On-site',
+    paymentMethod: 'ONLINE_PAYMONGO',
+    paymentStatus: 'PAID',
+    statusMessage: 'We\'re now processing your order',
   },
   {
     id: 'BJC-003',
-    items: [{ ...products[0], quantity: 3, size: 'Regular', sugarLevel: '50%', toppings: ['Nata de Coco'], addOns: [] }],
-    total: 267,
+    items: [{ ...sampleOrderItem, cartItemId: 'sample-lm-3', quantity: 1, basePrice: 135, selectedDrinkType: 'BLENDED', selectedSizeOz: 16 }],
+    total: 135,
     status: 'ready',
     time: '11:00 AM',
     customerName: 'Ana Reyes',
     orderType: 'Advance Order',
+    paymentMethod: 'ONLINE_PAYMONGO',
+    paymentStatus: 'PAID',
+    statusMessage: 'We\'re now processing your order',
   },
   {
     id: 'BJC-004',
-    items: [{ ...products[9], quantity: 1, size: 'Large', sugarLevel: '25%', toppings: [], addOns: ['Oat Milk'] }],
+    items: [{ ...sampleOrderItem, cartItemId: 'sample-kf-4', storeId: 'kohfee', name: 'Caramel Frappe', productId: 'kf-caramel-frappe', selectedMenuGroup: 'BLENDED', selectedSubGroup: 'COFFEE', selectedDrinkType: undefined, selectedSizeOz: 16, basePrice: 149, toppingsLabel: undefined, toppingsCost: 0 }],
     total: 149,
     status: 'completed',
     time: '9:15 AM',
     customerName: 'Carlo Mendoza',
     orderType: 'On-site',
+    paymentMethod: 'ONLINE_PAYMONGO',
+    paymentStatus: 'PAID',
+    statusMessage: 'We\'re now processing your order',
   },
 ];

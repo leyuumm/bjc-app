@@ -2,30 +2,33 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAppContext } from './AppContext';
-import type { Order } from './data';
+import type { Order } from '../types/order';
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-  pending: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D' },
+  waiting_for_arrival: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D' },
   preparing: { bg: '#E3F2FD', text: '#1565C0', border: '#64B5F6' },
   ready: { bg: '#E8F5E9', text: '#2E7D32', border: '#81C784' },
   completed: { bg: '#F5F5F5', text: '#757575', border: '#E0E0E0' },
+  payment_failed: { bg: '#FFEBEE', text: '#D32F2F', border: '#EF9A9A' },
 };
 
 const statusIcons: Record<string, React.ElementType> = {
-  pending: Clock,
+  waiting_for_arrival: Clock,
   preparing: ChefHat,
   ready: Coffee,
   completed: CheckCircle2,
+  payment_failed: Clock,
 };
 
 const nextStatus: Record<string, Order['status'] | null> = {
-  pending: 'preparing',
+  waiting_for_arrival: 'preparing',
   preparing: 'ready',
   ready: 'completed',
   completed: null,
+  payment_failed: null,
 };
 
-const filterTabs = ['All', 'Pending', 'Preparing', 'Ready', 'Completed'];
+const filterTabs = ['All', 'Waiting', 'Preparing', 'Ready', 'Completed'];
 
 export function CashierDashboard() {
   const { orders, updateOrderStatus } = useAppContext();
@@ -33,7 +36,7 @@ export function CashierDashboard() {
 
   const filtered = activeFilter === 'All'
     ? orders
-    : orders.filter(o => o.status === activeFilter.toLowerCase());
+    : orders.filter(o => o.status === (activeFilter === 'Waiting' ? 'waiting_for_arrival' : activeFilter.toLowerCase()));
 
   return (
     <div className="px-4 pt-10 pb-6">
@@ -56,7 +59,7 @@ export function CashierDashboard() {
             {tab}
             {tab !== 'All' && (
               <span className="ml-1.5 text-[11px] opacity-70">
-                ({orders.filter(o => o.status === tab.toLowerCase()).length})
+                ({orders.filter(o => o.status === (tab === 'Waiting' ? 'waiting_for_arrival' : tab.toLowerCase())).length})
               </span>
             )}
           </button>
@@ -88,7 +91,19 @@ export function CashierDashboard() {
                       style={{ background: colors.bg, color: colors.text, fontWeight: 600 }}
                     >
                       <Icon size={12} />
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      {order.status === 'waiting_for_arrival'
+                        ? 'Waiting for Arrival'
+                        : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                    <span
+                      className="text-[10px] px-2 py-1 rounded-[10px]"
+                      style={{
+                        background: order.paymentMethod === 'ONLINE_PAYMONGO' ? '#E8F5E9' : '#FFF3E0',
+                        color: order.paymentMethod === 'ONLINE_PAYMONGO' ? '#2E7D32' : '#E65100',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {order.paymentMethod === 'ONLINE_PAYMONGO' ? 'PAID' : 'PAY AT STORE'}
                     </span>
                   </div>
                   <p className="text-[13px] text-[#757575] mt-0.5">{order.customerName}</p>
@@ -101,11 +116,17 @@ export function CashierDashboard() {
 
               <div className="bg-[#F5F5F5] rounded-[10px] p-2.5 mb-3">
                 {order.items.map(item => (
-                  <div key={item.id} className="flex justify-between text-[13px] py-0.5">
-                    <span className="text-[#362415]">{item.quantity}x {item.name} ({item.size})</span>
+                  <div key={item.cartItemId} className="flex justify-between text-[13px] py-0.5">
+                    <span className="text-[#362415]">
+                      {item.quantity}x {item.name}
+                      {item.selectedSizeOz ? ` (${item.selectedSizeOz}oz)` : ''}
+                    </span>
                   </div>
                 ))}
                 <p className="text-[11px] text-[#757575] mt-1">{order.orderType}</p>
+                {order.paymentMethod === 'PAY_AT_STORE' && (
+                  <p className="text-[11px] text-[#E65100] mt-1">Prepare once arrived</p>
+                )}
               </div>
 
               {next && (

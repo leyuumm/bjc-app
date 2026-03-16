@@ -1,43 +1,77 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { ArrowLeft, Clock, MapPin, CreditCard, Smartphone, Check } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check } from 'lucide-react';
 import { useAppContext } from './AppContext';
+import { getCartItemLineTotal } from './data';
+import { createPaymongoCheckout } from '../lib/paymongo';
+import type { PaymentMethod } from '../types/order';
 
 export function CheckoutPage() {
   const navigate = useNavigate();
   const { cart, clearCart, addOrder } = useAppContext();
   const [orderType, setOrderType] = useState<'advance' | 'onsite'>('advance');
   const [pickupTime, setPickupTime] = useState('10:30 AM');
-  const [paymentMethod, setPaymentMethod] = useState('gcash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PAY_AT_STORE');
+  const [submitting, setSubmitting] = useState(false);
 
-  const subtotal = cart.reduce((sum, item) => {
-    const sizePrice = item.size === 'Regular' ? 0 : item.size === 'Medium' ? 20 : 40;
-    const extras = item.toppings.length * 15 + item.addOns.length * 20;
-    return sum + (item.price + sizePrice + extras) * item.quantity;
-  }, 0);
+  const subtotal = cart.reduce((sum, item) => sum + getCartItemLineTotal(item), 0);
 
   const pickupTimes = ['9:00 AM', '9:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 PM', '12:30 PM', '1:00 PM'];
 
-  const paymentMethods = [
-    { id: 'gcash', name: 'GCash', icon: Smartphone, color: '#0070E0' },
-    { id: 'paymaya', name: 'PayMaya', icon: Smartphone, color: '#00C853' },
-    { id: 'stripe', name: 'Stripe', icon: CreditCard, color: '#6772E5' },
-    { id: 'paypal', name: 'PayPal', icon: CreditCard, color: '#003087' },
+  const paymentMethods: Array<{ id: PaymentMethod; name: string; icon: React.ElementType; color: string }> = [
+    { id: 'PAY_AT_STORE', name: 'Pay at Store', icon: Store, color: '#362415' },
+    { id: 'ONLINE_PAYMONGO', name: 'Online (PayMongo)', icon: CreditCard, color: '#0070E0' },
   ];
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
+    if (cart.length === 0 || submitting) {
+      return;
+    }
+
+    setSubmitting(true);
     const orderId = `BJC-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`;
+
+    let paymentStatus: 'UNPAID' | 'PAID' | 'FAILED' | 'PENDING' = 'UNPAID';
+    let statusMessage = 'Prepare once you arrived in the store';
+    let status: 'waiting_for_arrival' | 'preparing' | 'payment_failed' = 'waiting_for_arrival';
+
+    if (paymentMethod === 'ONLINE_PAYMONGO') {
+      const result = await createPaymongoCheckout({ id: orderId, total: subtotal, items: cart });
+
+      if (result.status === 'PAID') {
+        paymentStatus = 'PAID';
+        status = 'preparing';
+        statusMessage = 'We\'re now processing your order';
+      } else if (result.status === 'PENDING') {
+        paymentStatus = 'PENDING';
+        status = 'preparing';
+        statusMessage = 'We\'re now processing your order';
+      } else {
+        paymentStatus = 'FAILED';
+        status = 'payment_failed';
+        statusMessage = 'Online payment failed. Please try again or switch to Pay at Store.';
+      }
+    }
+
     addOrder({
       id: orderId,
       items: cart,
       total: subtotal,
-      status: 'pending',
+      status,
       time: pickupTime,
       customerName: 'You',
       orderType: orderType === 'advance' ? 'Advance Order' : 'On-site',
+      paymentMethod,
+      paymentStatus,
+      statusMessage,
     });
-    clearCart();
+
+    if (paymentStatus !== 'FAILED') {
+      clearCart();
+    }
+
+    setSubmitting(false);
     navigate('/order-tracking/' + orderId);
   };
 
@@ -130,6 +164,14 @@ export function CheckoutPage() {
         </div>
       </div>
 
+      <div className="mb-6 rounded-[12px] bg-[#F5F5F5] p-3">
+        <p className="text-[12px] text-[#757575]">
+          {paymentMethod === 'PAY_AT_STORE'
+            ? 'Prepare once you arrived in the store'
+            : 'We\'re now processing your order'}
+        </p>
+      </div>
+
       {/* Order Summary */}
       <div className="rounded-[16px] bg-[#F5F5F5] p-4 mb-6">
         <h3 className="text-[15px] text-[#362415] mb-3" style={{ fontWeight: 600 }}>Order Summary</h3>
@@ -153,10 +195,16 @@ export function CheckoutPage() {
       {/* Place Order */}
       <button
         onClick={handlePlaceOrder}
+        disabled={submitting || cart.length === 0}
         className="w-full py-4 rounded-[16px] text-white text-[16px] cursor-pointer"
-        style={{ background: '#00704A', fontWeight: 600, boxShadow: '0 4px 16px rgba(0,112,74,0.3)' }}
+        style={{
+          background: '#00704A',
+          fontWeight: 600,
+          boxShadow: '0 4px 16px rgba(0,112,74,0.3)',
+          opacity: submitting || cart.length === 0 ? 0.5 : 1,
+        }}
       >
-        Place Order &mdash; &#8369;{subtotal}
+        {submitting ? 'Placing Order...' : `Place Order — ₱${subtotal}`}
       </button>
     </div>
   );

@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Clock, ChefHat, Coffee, CheckCircle2, ChevronRight, ShieldCheck } from 'lucide-react';
+import { Clock, ChefHat, Coffee, CheckCircle2, ChevronRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAppContext } from './AppContext';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  pending: { bg: '#FFF3E0', text: '#E65100' },
+  waiting_for_arrival: { bg: '#FFF3E0', text: '#E65100' },
   preparing: { bg: '#E3F2FD', text: '#1565C0' },
   ready: { bg: '#E8F5E9', text: '#2E7D32' },
   completed: { bg: '#F5F5F5', text: '#757575' },
+  payment_failed: { bg: '#FFEBEE', text: '#D32F2F' },
 };
 
 const statusIcons: Record<string, React.ElementType> = {
-  pending: Clock,
+  waiting_for_arrival: Clock,
   preparing: ChefHat,
   ready: Coffee,
   completed: CheckCircle2,
+  payment_failed: AlertCircle,
 };
 
 export function OrdersPage() {
@@ -91,7 +93,9 @@ export function OrdersPage() {
                   style={{ background: colors.bg, color: colors.text, fontWeight: 600 }}
                 >
                   <Icon size={12} />
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  {order.status === 'waiting_for_arrival'
+                    ? 'Waiting for Arrival'
+                    : order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                 </span>
               </div>
 

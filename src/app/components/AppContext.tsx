@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { CartItem, Order, sampleOrders } from './data';
+import type { Order } from '../types/order';
+import type { CartItem, StoreId } from '../types/menu';
+import { sampleOrders } from './data';
 
 interface AppState {
-  selectedBrand: 'lehmuhn' | 'kohfee' | null;
-  setSelectedBrand: (b: 'lehmuhn' | 'kohfee' | null) => void;
+  selectedBrand: StoreId | null;
+  setSelectedBrand: (b: StoreId | null) => void;
   selectedBranch: string | null;
   setSelectedBranch: (b: string | null) => void;
   cart: CartItem[];
   addToCart: (item: CartItem) => void;
-  updateCartQuantity: (id: string, qty: number) => void;
-  removeFromCart: (id: string) => void;
+  updateCartQuantity: (cartItemId: string, qty: number) => void;
+  removeFromCart: (cartItemId: string) => void;
   clearCart: () => void;
   orders: Order[];
   addOrder: (order: Order) => void;
@@ -23,7 +25,7 @@ interface AppState {
 const AppContext = createContext<AppState>({} as AppState);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [selectedBrand, setSelectedBrand] = useState<'lehmuhn' | 'kohfee' | null>(null);
+  const [selectedBrand, setSelectedBrand] = useState<StoreId | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>(sampleOrders);
@@ -32,23 +34,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (item: CartItem) => {
     setCart(prev => {
-      const existing = prev.find(c => c.id === item.id && c.size === item.size);
+      const existing = prev.find(c => c.cartItemId === item.cartItemId);
       if (existing) {
-        return prev.map(c => c.id === item.id && c.size === item.size ? { ...c, quantity: c.quantity + item.quantity } : c);
+        return prev.map(c => c.cartItemId === item.cartItemId ? { ...c, quantity: c.quantity + item.quantity } : c);
       }
       return [...prev, item];
     });
   };
 
-  const updateCartQuantity = (id: string, qty: number) => {
+  const updateCartQuantity = (cartItemId: string, qty: number) => {
     if (qty <= 0) {
-      setCart(prev => prev.filter(c => c.id !== id));
+      setCart(prev => prev.filter(c => c.cartItemId !== cartItemId));
     } else {
-      setCart(prev => prev.map(c => c.id === id ? { ...c, quantity: qty } : c));
+      setCart(prev => prev.map(c => c.cartItemId === cartItemId ? { ...c, quantity: qty } : c));
     }
   };
 
-  const removeFromCart = (id: string) => setCart(prev => prev.filter(c => c.id !== id));
+  const removeFromCart = (cartItemId: string) => setCart(prev => prev.filter(c => c.cartItemId !== cartItemId));
   const clearCart = () => setCart([]);
 
   const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);

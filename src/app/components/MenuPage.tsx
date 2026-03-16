@@ -1,23 +1,66 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Plus, X, Minus, Check } from 'lucide-react';
+import { ShoppingCart, Plus, X, Minus, Check, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAppContext } from './AppContext';
-import { products, Product, CartItem } from './data';
+import { LEHMUHN_ADD_ONS, getAllowedSizesByStoreType } from '../config/menuRules';
+import type {
+  AddOnOption,
+  CartItem,
+  KohFeeMenuGroup,
+  KohFeeSubGroup,
+  LehMuhnDrinkType,
+  Product,
+  SizeOz,
+} from '../types/menu';
+import { getPriceForSize, products } from './data';
+import { cn } from './ui/utils';
+
+const LEHMUHN_TABS: LehMuhnDrinkType[] = ['HOT', 'COLD', 'BLENDED', 'SPARKLING'];
+const KOHFEE_TABS: KohFeeMenuGroup[] = ['COLD', 'HOT', 'BLENDED', 'FOOD'];
+const KOHFEE_SUBGROUPS: KohFeeSubGroup[] = ['COFFEE', 'NON_COFFEE'];
 
 export function MenuPage() {
   const navigate = useNavigate();
   const { selectedBrand, cart, addToCart } = useAppContext();
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeLehmuhnType, setActiveLehmuhnType] = useState<LehMuhnDrinkType>('COLD');
+  const [activeKohfeeGroup, setActiveKohfeeGroup] = useState<KohFeeMenuGroup>('COLD');
+  const [activeKohfeeSubGroup, setActiveKohfeeSubGroup] = useState<KohFeeSubGroup>('COFFEE');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
-  const brandProducts = products.filter(p => p.brand === selectedBrand);
-  const categories = ['All', ...new Set(brandProducts.map(p => p.category))];
-  const filteredProducts = activeCategory === 'All'
-    ? brandProducts
-    : brandProducts.filter(p => p.category === activeCategory);
+  const brandProducts = products.filter(p => p.storeId === selectedBrand);
+  const isLehmuhn = selectedBrand === 'lehmuhn';
+
+  const filteredProducts = brandProducts.filter(product => {
+    if (product.storeId === 'lehmuhn') {
+      const allowedDrinkTypes = product.allowedDrinkTypes ?? [product.drinkType];
+      return allowedDrinkTypes.includes(activeLehmuhnType);
+    }
+
+    const allowedGroups = product.allowedMenuGroups ?? [product.menuGroup];
+    if (!allowedGroups.includes(activeKohfeeGroup)) {
+      return false;
+    }
+
+    if (activeKohfeeGroup === 'FOOD') {
+      return true;
+    }
+
+    return product.subGroup === activeKohfeeSubGroup;
+  });
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  if (!selectedBrand) {
+    return (
+      <div className="px-4 pt-14 text-center">
+        <p className="text-[#757575]">Select a store first to browse the menu.</p>
+        <button onClick={() => navigate('/home')} className="text-[#00704A] mt-4 cursor-pointer">
+          Back to Home
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="relative">
@@ -43,21 +86,46 @@ export function MenuPage() {
 
         {/* Category Chips */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
-          {categories.map(cat => (
+          {(isLehmuhn ? LEHMUHN_TABS : KOHFEE_TABS).map(cat => (
             <button
               key={cat}
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => {
+                if (isLehmuhn) {
+                  setActiveLehmuhnType(cat as LehMuhnDrinkType);
+                } else {
+                  setActiveKohfeeGroup(cat as KohFeeMenuGroup);
+                }
+              }}
               className={`px-4 py-2 rounded-[20px] text-[13px] whitespace-nowrap cursor-pointer transition-all ${
-                activeCategory === cat
+                (isLehmuhn ? activeLehmuhnType : activeKohfeeGroup) === cat
                   ? 'bg-[#00704A] text-white'
                   : 'bg-[#F5F5F5] text-[#757575]'
               }`}
-              style={{ fontWeight: activeCategory === cat ? 600 : 400 }}
+              style={{ fontWeight: (isLehmuhn ? activeLehmuhnType : activeKohfeeGroup) === cat ? 600 : 400 }}
             >
               {cat}
             </button>
           ))}
         </div>
+
+        {!isLehmuhn && activeKohfeeGroup !== 'FOOD' && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
+            {KOHFEE_SUBGROUPS.map(subGroup => (
+              <button
+                key={subGroup}
+                onClick={() => setActiveKohfeeSubGroup(subGroup)}
+                className={`px-3 py-1.5 rounded-[14px] text-[12px] whitespace-nowrap cursor-pointer transition-all ${
+                  activeKohfeeSubGroup === subGroup
+                    ? 'bg-[#362415] text-white'
+                    : 'bg-[#F5F5F5] text-[#757575]'
+                }`}
+                style={{ fontWeight: activeKohfeeSubGroup === subGroup ? 600 : 400 }}
+              >
+                {subGroup === 'NON_COFFEE' ? 'NON-COFFEE' : subGroup}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Product Grid */}
@@ -77,11 +145,17 @@ export function MenuPage() {
               <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
             </div>
             <div className="p-3">
+              {product.isPremium && (
+                <div className="inline-flex items-center gap-1 bg-[#362415] text-white text-[10px] px-2 py-1 rounded-[10px] mb-2">
+                  <Sparkles size={11} />
+                  <span style={{ fontWeight: 600 }}>Premium</span>
+                </div>
+              )}
               <h3 className="text-[14px] text-[#362415] line-clamp-1" style={{ fontWeight: 600 }}>{product.name}</h3>
               <p className="text-[12px] text-[#757575] mt-0.5 line-clamp-1">{product.description}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-[15px] text-[#00704A]" style={{ fontWeight: 700 }}>
-                  &#8369;{product.price}
+                  &#8369;{product.basePrice}
                 </span>
                 <div className="w-8 h-8 rounded-full bg-[#00704A] flex items-center justify-center">
                   <Plus size={16} color="white" />
@@ -97,6 +171,9 @@ export function MenuPage() {
         {selectedProduct && (
           <ProductDetailSheet
             product={selectedProduct}
+            activeLehmuhnType={activeLehmuhnType}
+            activeKohfeeGroup={activeKohfeeGroup}
+            activeKohfeeSubGroup={activeKohfeeSubGroup}
             onClose={() => setSelectedProduct(null)}
             onAddToCart={addToCart}
           />
@@ -108,42 +185,111 @@ export function MenuPage() {
 
 function ProductDetailSheet({
   product,
+  activeLehmuhnType,
+  activeKohfeeGroup,
+  activeKohfeeSubGroup,
   onClose,
   onAddToCart,
 }: {
   product: Product;
+  activeLehmuhnType: LehMuhnDrinkType;
+  activeKohfeeGroup: KohFeeMenuGroup;
+  activeKohfeeSubGroup: KohFeeSubGroup;
   onClose: () => void;
   onAddToCart: (item: CartItem) => void;
 }) {
-  const [size, setSize] = useState('Regular');
-  const [sugarLevel, setSugarLevel] = useState('100%');
+  const isLehmuhn = product.storeId === 'lehmuhn';
+  const selectedType = isLehmuhn
+    ? ((product.allowedDrinkTypes ?? [product.drinkType]).includes(activeLehmuhnType)
+      ? activeLehmuhnType
+      : product.drinkType)
+    : undefined;
+  const selectedGroup = !isLehmuhn
+    ? ((product.allowedMenuGroups ?? [product.menuGroup]).includes(activeKohfeeGroup)
+      ? activeKohfeeGroup
+      : product.menuGroup)
+    : undefined;
+  const allowedSizes = getAllowedSizesByStoreType(
+    product.storeId,
+    isLehmuhn ? (selectedType as LehMuhnDrinkType) : (selectedGroup as KohFeeMenuGroup),
+  );
+
+  const [sizeOz, setSizeOz] = useState<SizeOz | undefined>(allowedSizes[0]);
   const [quantity, setQuantity] = useState(1);
-  const [toppings, setToppings] = useState<string[]>([]);
-  const [addOns, setAddOns] = useState<string[]>([]);
+  const [toppingsRemoved, setToppingsRemoved] = useState(false);
+  const [addOns, setAddOns] = useState<AddOnOption[]>([]);
+  const [hotOption, setHotOption] = useState(isLehmuhn && product.hotOptions?.length ? product.hotOptions[0] : '');
+  const [selectedFruits, setSelectedFruits] = useState<string[]>([]);
 
-  const sizes = ['Regular', 'Medium', 'Large'];
-  const sugarLevels = ['0%', '25%', '50%', '75%', '100%'];
-  const toppingOptions = ['Whipped Cream', 'Nata de Coco', 'Pearl Boba', 'Jelly'];
-  const addOnOptions = ['Extra Shot', 'Oat Milk', 'Vanilla Syrup', 'Caramel Drizzle'];
+  const basePrice = getPriceForSize(product, sizeOz);
+  const toppingsCost = toppingsRemoved ? 0 : (product.defaultToppingsCost ?? 0);
+  const addOnsPrice = addOns.reduce((sum, addOn) => sum + addOn.extraCost, 0);
+  const totalPrice = (basePrice + toppingsCost + addOnsPrice) * quantity;
+  const fruitRule = isLehmuhn ? product.requiresFruitSelection : undefined;
+  const fruitRequirementMet = !fruitRule || selectedFruits.length === fruitRule.min;
 
-  const sizePrice = size === 'Regular' ? 0 : size === 'Medium' ? 20 : 40;
-  const toppingsPrice = toppings.length * 15;
-  const addOnsPrice = addOns.length * 20;
-  const totalPrice = (product.price + sizePrice + toppingsPrice + addOnsPrice) * quantity;
+  const toggleAddOn = (option: AddOnOption) => {
+    setAddOns(prev => (
+      prev.some(existing => existing.id === option.id)
+        ? prev.filter(existing => existing.id !== option.id)
+        : [...prev, option]
+    ));
+  };
 
-  const toggleTopping = (t: string) =>
-    setToppings(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
-  const toggleAddOn = (a: string) =>
-    setAddOns(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a]);
+  const toggleFruit = (fruit: string) => {
+    setSelectedFruits(prev => {
+      if (prev.includes(fruit)) {
+        return prev.filter(item => item !== fruit);
+      }
+
+      if (!fruitRule) {
+        return prev;
+      }
+
+      if (prev.length >= fruitRule.max) {
+        return prev;
+      }
+
+      return [...prev, fruit];
+    });
+  };
 
   const handleAdd = () => {
+    if (!fruitRequirementMet) {
+      return;
+    }
+
+    const signature = [
+      product.id,
+      sizeOz ?? 'nosize',
+      isLehmuhn ? selectedType : selectedGroup,
+      !isLehmuhn ? activeKohfeeSubGroup : 'nosub',
+      hotOption,
+      toppingsRemoved ? 'remove_toppings' : 'keep_toppings',
+      addOns.map(addOn => addOn.id).sort().join('|'),
+      selectedFruits.slice().sort().join('|'),
+    ].join('__');
+
     onAddToCart({
-      ...product,
+      cartItemId: signature,
+      productId: product.id,
+      storeId: product.storeId,
+      name: product.name,
+      description: product.description,
+      image: product.image,
+      basePrice,
       quantity,
-      size,
-      sugarLevel,
-      toppings,
+      isPremium: product.isPremium,
+      selectedSizeOz: sizeOz,
+      selectedDrinkType: isLehmuhn ? selectedType : undefined,
+      selectedMenuGroup: !isLehmuhn ? selectedGroup : undefined,
+      selectedSubGroup: !isLehmuhn && selectedGroup !== 'FOOD' ? activeKohfeeSubGroup : undefined,
       addOns,
+      toppingsRemoved,
+      toppingsLabel: product.defaultToppingsLabel,
+      toppingsCost: product.defaultToppingsCost,
+      selectedHotOption: hotOption || undefined,
+      selectedFruits: selectedFruits.length > 0 ? selectedFruits : undefined,
     });
     onClose();
   };
@@ -183,97 +329,130 @@ function ProductDetailSheet({
         <div className="px-5 pt-4 pb-6">
           <h2 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>{product.name}</h2>
           <p className="text-[14px] text-[#757575] mt-1">{product.description}</p>
-          <p className="text-[20px] text-[#00704A] mt-2" style={{ fontWeight: 700 }}>&#8369;{product.price}</p>
+          <p className="text-[20px] text-[#00704A] mt-2" style={{ fontWeight: 700 }}>&#8369;{basePrice}</p>
 
           {/* Size */}
-          <div className="mt-5">
-            <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Size</h4>
-            <div className="flex gap-2">
-              {sizes.map(s => (
+          {allowedSizes.length > 0 && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Size (oz)</h4>
+              <div className="flex gap-2">
+                {allowedSizes.map(size => (
                 <button
-                  key={s}
-                  onClick={() => setSize(s)}
+                  key={size}
+                  onClick={() => setSizeOz(size)}
                   className={`flex-1 py-2.5 rounded-[12px] text-[13px] cursor-pointer border transition-all ${
-                    size === s
+                    sizeOz === size
                       ? 'bg-[#00704A] text-white border-[#00704A]'
                       : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]'
                   }`}
-                  style={{ fontWeight: size === s ? 600 : 400 }}
+                  style={{ fontWeight: sizeOz === size ? 600 : 400 }}
                 >
-                  {s}
-                  {s !== 'Regular' && <span className="block text-[11px] opacity-70">+&#8369;{s === 'Medium' ? 20 : 40}</span>}
+                  {size}oz
+                  <span className="block text-[11px] opacity-70">&#8369;{getPriceForSize(product, size)}</span>
                 </button>
               ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Sugar Level */}
-          <div className="mt-5">
-            <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Sugar Level</h4>
-            <div className="flex gap-1.5">
-              {sugarLevels.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setSugarLevel(s)}
-                  className={`flex-1 py-2 rounded-[10px] text-[12px] cursor-pointer transition-all ${
-                    sugarLevel === s
-                      ? 'bg-[#00704A] text-white'
-                      : 'bg-[#F5F5F5] text-[#757575]'
-                  }`}
-                  style={{ fontWeight: sugarLevel === s ? 600 : 400 }}
-                >
-                  {s}
-                </button>
-              ))}
+          {product.defaultToppingsLabel && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Toppings removal</h4>
+              <button
+                onClick={() => setToppingsRemoved(prev => !prev)}
+                className={cn(
+                  'w-full flex items-center justify-between py-2.5 px-3 rounded-[12px] border cursor-pointer transition-all text-left',
+                  toppingsRemoved ? 'bg-[#FFF3E0] border-[#FFB74D]' : 'bg-white border-[rgba(0,0,0,0.12)]',
+                )}
+              >
+                <div>
+                  <span className="text-[14px] text-[#362415]">No toppings</span>
+                  <p className="text-[11px] text-[#757575]">Default: {product.defaultToppingsLabel}</p>
+                </div>
+                {toppingsRemoved && <Check size={18} color="#E65100" />}
+              </button>
             </div>
-          </div>
+          )}
 
-          {/* Toppings */}
-          <div className="mt-5">
-            <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Toppings (+&#8369;15 each)</h4>
-            <div className="space-y-2">
-              {toppingOptions.map(t => (
+          {isLehmuhn && LEHMUHN_ADD_ONS.length > 0 && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Add-ons</h4>
+              <div className="space-y-2">
+                {LEHMUHN_ADD_ONS.map(option => (
                 <button
-                  key={t}
-                  onClick={() => toggleTopping(t)}
+                  key={option.id}
+                  onClick={() => toggleAddOn(option)}
                   className="w-full flex items-center justify-between py-2.5 px-3 rounded-[12px] border cursor-pointer transition-all text-left"
                   style={{
-                    borderColor: toppings.includes(t) ? '#00704A' : 'rgba(0,0,0,0.12)',
-                    backgroundColor: toppings.includes(t) ? '#E8F5E9' : 'white',
+                    borderColor: addOns.some(addOn => addOn.id === option.id) ? '#00704A' : 'rgba(0,0,0,0.12)',
+                    backgroundColor: addOns.some(addOn => addOn.id === option.id) ? '#E8F5E9' : 'white',
                   }}
                 >
-                  <span className="text-[14px] text-[#362415]">{t}</span>
-                  {toppings.includes(t) && <Check size={18} color="#00704A" />}
+                  <span className="text-[14px] text-[#362415]">{option.name}</span>
+                  {addOns.some(addOn => addOn.id === option.id) && <Check size={18} color="#00704A" />}
                 </button>
               ))}
             </div>
-          </div>
+            </div>
+          )}
 
-          {/* Add-ons */}
-          <div className="mt-5">
-            <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Add-ons (+&#8369;20 each)</h4>
-            <div className="space-y-2">
-              {addOnOptions.map(a => {
-                const isActive = addOns.includes(a);
-                return (
+          {isLehmuhn && product.hotOptions && product.hotOptions.length > 0 && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Hot options</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {product.hotOptions.map(option => (
                   <button
-                    key={a}
-                    onClick={() => toggleAddOn(a)}
-                    className="w-full flex items-center justify-between py-2.5 px-3 rounded-[12px] border cursor-pointer text-left"
+                    key={option}
+                    onClick={() => setHotOption(option)}
+                    className={cn(
+                      'py-2 rounded-[10px] text-[12px] border cursor-pointer transition-all',
+                      hotOption === option
+                        ? 'bg-[#00704A] text-white border-[#00704A]'
+                        : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]',
+                    )}
                     style={{
-                      borderColor: isActive ? '#00704A' : 'rgba(0,0,0,0.12)',
-                      backgroundColor: isActive ? '#E8F5E9' : 'white',
+                      fontWeight: hotOption === option ? 600 : 400,
                     }}
                   >
-                    <span className="text-[14px] text-[#362415]">{a}</span>
-                    <div className={`w-10 h-6 rounded-full flex items-center px-0.5 transition-all ${isActive ? 'bg-[#00704A] justify-end' : 'bg-[#E0E0E0] justify-start'}`}>
-                      <div className="w-5 h-5 rounded-full bg-white" style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                    </div>
+                    {option}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {isLehmuhn && fruitRule && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>
+                Choose {fruitRule.min} fruits
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {fruitRule.options.map(option => {
+                  const active = selectedFruits.includes(option);
+                  const locked = !active && selectedFruits.length >= fruitRule.max;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => toggleFruit(option)}
+                      disabled={locked}
+                      className={cn(
+                        'py-2 rounded-[10px] text-[12px] border cursor-pointer transition-all',
+                        active
+                          ? 'bg-[#00704A] text-white border-[#00704A]'
+                          : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]',
+                        locked ? 'opacity-40 cursor-not-allowed' : '',
+                      )}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-[#757575] mt-1">
+                Selected: {selectedFruits.length}/{fruitRule.max}
+              </p>
+            </div>
+          )}
 
           {/* Quantity */}
           <div className="mt-5 flex items-center justify-between">
@@ -298,8 +477,14 @@ function ProductDetailSheet({
           {/* Add to Cart */}
           <button
             onClick={handleAdd}
+            disabled={!fruitRequirementMet}
             className="w-full py-4 rounded-[16px] text-white text-[16px] mt-6 cursor-pointer"
-            style={{ background: '#00704A', fontWeight: 600, boxShadow: '0 4px 16px rgba(0,112,74,0.3)' }}
+            style={{
+              background: '#00704A',
+              fontWeight: 600,
+              boxShadow: '0 4px 16px rgba(0,112,74,0.3)',
+              opacity: fruitRequirementMet ? 1 : 0.5,
+            }}
           >
             Add to Cart &mdash; &#8369;{totalPrice}
           </button>

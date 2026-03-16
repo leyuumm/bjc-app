@@ -1,21 +1,23 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { CheckCircle2, Clock, ChefHat, Coffee, PartyPopper } from 'lucide-react';
+import { CheckCircle2, Clock, ChefHat, Coffee, PartyPopper, AlertCircle } from 'lucide-react';
 import { useAppContext } from './AppContext';
+import { getCartItemLineTotal } from './data';
 
 const steps = [
-  { label: 'Pending', icon: Clock },
+  { label: 'Arrival', icon: Clock },
   { label: 'Preparing', icon: ChefHat },
   { label: 'Ready', icon: Coffee },
   { label: 'Completed', icon: PartyPopper },
 ];
 
 const statusIndex: Record<string, number> = {
-  pending: 0,
+  waiting_for_arrival: 0,
   preparing: 1,
   ready: 2,
   completed: 3,
+  payment_failed: 0,
 };
 
 export function OrderTracking() {
@@ -58,11 +60,26 @@ export function OrderTracking() {
         <h2 className="text-[20px] text-[#362415]" style={{ fontWeight: 700 }}>Order Placed!</h2>
         <p className="text-[14px] text-[#757575] mt-1">Order #{order.id}</p>
         <p className="text-[13px] text-[#757575]">Pickup at {order.time}</p>
+        <p className="text-[12px] text-[#00704A] mt-1">{order.statusMessage}</p>
       </motion.div>
+
+      <div className="rounded-[12px] bg-[#F5F5F5] p-3 mb-4 flex items-center gap-2">
+        {order.status === 'payment_failed' ? <AlertCircle size={16} color="#D32F2F" /> : <CheckCircle2 size={16} color="#00704A" />}
+        <p className="text-[12px] text-[#757575]">
+          {order.paymentMethod === 'PAY_AT_STORE'
+            ? 'Payment: Pay at Store'
+            : `Payment: ${order.paymentStatus}`}
+        </p>
+      </div>
 
       {/* Stepper */}
       <div className="rounded-[16px] bg-white p-5 mb-6" style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
         <h3 className="text-[15px] text-[#362415] mb-6" style={{ fontWeight: 600 }}>Order Status</h3>
+        {order.status === 'payment_failed' && (
+          <p className="text-[12px] text-[#D32F2F] mb-4">
+            Online payment was not completed. You can place a new order with Pay at Store.
+          </p>
+        )}
         <div className="flex items-center justify-between relative">
           {/* Line */}
           <div className="absolute top-5 left-[10%] right-[10%] h-[3px] bg-[#E0E0E0] rounded-full">
@@ -106,9 +123,12 @@ export function OrderTracking() {
       <div className="rounded-[16px] bg-[#F5F5F5] p-4 mb-6">
         <h3 className="text-[15px] text-[#362415] mb-3" style={{ fontWeight: 600 }}>Order Details</h3>
         {order.items.map(item => (
-          <div key={item.id} className="flex justify-between py-2 text-[14px]">
-            <span className="text-[#362415]">{item.quantity}x {item.name} ({item.size})</span>
-            <span className="text-[#757575]" style={{ fontWeight: 500 }}>&#8369;{item.price * item.quantity}</span>
+          <div key={item.cartItemId} className="flex justify-between py-2 text-[14px]">
+            <span className="text-[#362415]">
+              {item.quantity}x {item.name}
+              {item.selectedSizeOz ? ` (${item.selectedSizeOz}oz)` : ''}
+            </span>
+            <span className="text-[#757575]" style={{ fontWeight: 500 }}>&#8369;{getCartItemLineTotal(item)}</span>
           </div>
         ))}
         <div className="h-px bg-[rgba(0,0,0,0.08)] my-2" />

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { ArrowLeft, Minus, Plus, Trash2, Tag, ShoppingBag } from 'lucide-react';
 import { useAppContext } from './AppContext';
+import { getCartItemLineTotal } from './data';
 
 export function CartPage() {
   const navigate = useNavigate();
@@ -10,11 +11,7 @@ export function CartPage() {
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
-  const subtotal = cart.reduce((sum, item) => {
-    const sizePrice = item.size === 'Regular' ? 0 : item.size === 'Medium' ? 20 : 40;
-    const extras = item.toppings.length * 15 + item.addOns.length * 20;
-    return sum + (item.price + sizePrice + extras) * item.quantity;
-  }, 0);
+  const subtotal = cart.reduce((sum, item) => sum + getCartItemLineTotal(item), 0);
 
   const discount = promoApplied ? Math.round(subtotal * 0.1) : 0;
   const total = subtotal - discount;
@@ -52,7 +49,7 @@ export function CartPage() {
       <div className="space-y-3 mb-6">
         {cart.map((item, i) => (
           <motion.div
-            key={item.id + item.size}
+            key={item.cartItemId}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.05 }}
@@ -65,33 +62,52 @@ export function CartPage() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h3 className="text-[15px] text-[#362415]" style={{ fontWeight: 600 }}>{item.name}</h3>
-                    <p className="text-[12px] text-[#757575] mt-0.5">{item.size} &bull; Sugar: {item.sugarLevel}</p>
-                    {item.toppings.length > 0 && (
-                      <p className="text-[11px] text-[#00704A]">+{item.toppings.join(', ')}</p>
+                    <p className="text-[12px] text-[#757575] mt-0.5">
+                      {item.storeId === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee'}
+                      {item.selectedDrinkType ? ` • ${item.selectedDrinkType}` : ''}
+                      {item.selectedMenuGroup ? ` • ${item.selectedMenuGroup}` : ''}
+                      {item.selectedSubGroup ? ` • ${item.selectedSubGroup === 'NON_COFFEE' ? 'NON-COFFEE' : item.selectedSubGroup}` : ''}
+                    </p>
+                    {item.selectedSizeOz && (
+                      <p className="text-[11px] text-[#757575]">Size: {item.selectedSizeOz}oz</p>
+                    )}
+                    {item.addOns.length > 0 && (
+                      <p className="text-[11px] text-[#00704A]">Add-ons: {item.addOns.map(addOn => addOn.name).join(', ')}</p>
+                    )}
+                    {item.toppingsLabel && (
+                      <p className="text-[11px] text-[#757575]">
+                        Toppings: {item.toppingsRemoved ? 'Removed' : item.toppingsLabel}
+                      </p>
+                    )}
+                    {item.selectedHotOption && (
+                      <p className="text-[11px] text-[#757575]">Hot option: {item.selectedHotOption}</p>
+                    )}
+                    {item.selectedFruits && item.selectedFruits.length > 0 && (
+                      <p className="text-[11px] text-[#757575]">Fruits: {item.selectedFruits.join(', ')}</p>
                     )}
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} className="cursor-pointer p-1">
+                  <button onClick={() => removeFromCart(item.cartItemId)} className="cursor-pointer p-1">
                     <Trash2 size={16} color="#D32F2F" />
                   </button>
                 </div>
                 <div className="flex items-center justify-between mt-2">
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                      onClick={() => updateCartQuantity(item.cartItemId, item.quantity - 1)}
                       className="w-7 h-7 rounded-full border border-[rgba(0,0,0,0.12)] flex items-center justify-center cursor-pointer"
                     >
                       <Minus size={14} color="#362415" />
                     </button>
                     <span className="text-[14px]" style={{ fontWeight: 600 }}>{item.quantity}</span>
                     <button
-                      onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                      onClick={() => updateCartQuantity(item.cartItemId, item.quantity + 1)}
                       className="w-7 h-7 rounded-full bg-[#00704A] flex items-center justify-center cursor-pointer"
                     >
                       <Plus size={14} color="white" />
                     </button>
                   </div>
                   <span className="text-[15px] text-[#00704A]" style={{ fontWeight: 700 }}>
-                    &#8369;{((item.price + (item.size === 'Regular' ? 0 : item.size === 'Medium' ? 20 : 40) + item.toppings.length * 15 + item.addOns.length * 20) * item.quantity)}
+                    &#8369;{getCartItemLineTotal(item)}
                   </span>
                 </div>
               </div>
