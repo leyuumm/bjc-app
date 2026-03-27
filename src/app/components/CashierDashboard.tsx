@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight } from 'lucide-react';
 import { useAppContext } from './AppContext';
+import { SIZE_LABELS } from '../config/menuRules';
 import type { Order } from '../types/order';
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -98,12 +99,19 @@ export function CashierDashboard() {
                     <span
                       className="text-[10px] px-2 py-1 rounded-[10px]"
                       style={{
-                        background: order.paymentMethod === 'ONLINE_PAYMONGO' ? '#E8F5E9' : '#FFF3E0',
-                        color: order.paymentMethod === 'ONLINE_PAYMONGO' ? '#2E7D32' : '#E65100',
+                        background: order.paymentStatus === 'PAID' ? '#E8F5E9'
+                          : order.paymentStatus === 'FAILED' ? '#FFEBEE'
+                          : '#FFF3E0',
+                        color: order.paymentStatus === 'PAID' ? '#2E7D32'
+                          : order.paymentStatus === 'FAILED' ? '#D32F2F'
+                          : '#E65100',
                         fontWeight: 700,
                       }}
                     >
-                      {order.paymentMethod === 'ONLINE_PAYMONGO' ? 'PAID' : 'PAY AT STORE'}
+                      {order.paymentStatus === 'PAID' ? 'PAID'
+                        : order.paymentStatus === 'FAILED' ? 'FAILED'
+                        : order.paymentMethod === 'PAY_AT_STORE' ? 'PAY AT STORE'
+                        : 'PENDING'}
                     </span>
                   </div>
                   <p className="text-[13px] text-[#757575] mt-0.5">{order.customerName}</p>
@@ -119,7 +127,7 @@ export function CashierDashboard() {
                   <div key={item.cartItemId} className="flex justify-between text-[13px] py-0.5">
                     <span className="text-[#362415]">
                       {item.quantity}x {item.name}
-                      {item.selectedSizeOz ? ` (${item.selectedSizeOz}oz)` : ''}
+                      {item.selectedSizeOz ? ` (${SIZE_LABELS[item.selectedSizeOz]} ${item.selectedSizeOz}oz)` : ''}
                     </span>
                   </div>
                 ))}

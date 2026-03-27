@@ -101,7 +101,7 @@ export function OrdersPage() {
 
               <div className="mt-2">
                 {order.items.slice(0, 2).map(item => (
-                  <p key={item.id} className="text-[13px] text-[#757575]">
+                  <p key={item.cartItemId} className="text-[13px] text-[#757575]">
                     {item.quantity}x {item.name}
                   </p>
                 ))}

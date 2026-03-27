@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { IMAGES } from './data';
+import { logout } from '../services/auth';
 
 const favoriteOrders = [
   { id: '1', name: 'Caramel Frappé', size: 'Large', image: IMAGES.frappe },
@@ -23,10 +24,15 @@ const orderHistory = [
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { loyaltyPoints, setIsLoggedIn } = useAppContext();
+  const { loyaltyPoints, setIsLoggedIn, userProfile, firebaseUser, resetState } = useAppContext();
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
-  const handleLogout = () => {
+  const displayName = userProfile?.name || firebaseUser?.displayName || 'Guest User';
+  const displayEmail = userProfile?.email || firebaseUser?.email || '';
+
+  const handleLogout = async () => {
+    await logout();
+    resetState();
     setIsLoggedIn(false);
     navigate('/splash');
   };
@@ -43,8 +49,8 @@ export function ProfilePage() {
             </button>
           </div>
           <div>
-            <h1 className="text-white text-[22px]" style={{ fontWeight: 700 }}>Juan Dela Cruz</h1>
-            <p className="text-white/60 text-[13px]">juan@email.com</p>
+            <h1 className="text-white text-[22px]" style={{ fontWeight: 700 }}>{displayName}</h1>
+            <p className="text-white/60 text-[13px]">{displayEmail}</p>
             <div className="flex items-center gap-1 mt-1">
               <Star size={14} color="#FFD700" fill="#FFD700" />
               <span className="text-white/80 text-[13px]" style={{ fontWeight: 500 }}>

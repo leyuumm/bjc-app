@@ -1,7 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Coffee } from 'lucide-react';
 
 export function SplashPage() {
   const navigate = useNavigate();
@@ -14,24 +13,10 @@ export function SplashPage() {
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.6, type: 'spring' }}
-          className="w-[140px] h-[140px] rounded-full bg-white flex items-center justify-center mb-8"
-          style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}
+          className="w-[240px] mb-8"
         >
-          <div className="w-[120px] h-[120px] rounded-full flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #00704A, #362415)' }}>
-            <Coffee size={56} color="white" strokeWidth={1.8} />
-          </div>
+          <img src="/beyond-jc-group-opc-logo.svg" alt="Beyond JC Group OPC logo" className="w-full h-auto" />
         </motion.div>
-
-        <motion.h1
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="text-white text-[36px] tracking-tight mb-2"
-          style={{ fontWeight: 700 }}
-        >
-          BJC
-        </motion.h1>
 
         <motion.p
           initial={{ y: 20, opacity: 0 }}

@@ -1,0 +1,23 @@
+<svg width="768" height="768" viewBox="0 0 768 768" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ringGrad" x1="76" y1="84" x2="692" y2="684" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4D7DFF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="768" height="768" fill="transparent"/>
+
+  <circle cx="384" cy="384" r="322" stroke="url(#ringGrad)" stroke-width="22"/>
+
+  <text x="208" y="162" fill="#1174EA" font-family="Arial, sans-serif" font-size="56" font-weight="800">BEYOND</text>
+
+  <path d="M206 167H418V253H332V426C332 486 303 530 251 556C198 582 140 568 97 515L167 442C194 470 232 468 249 446C257 436 260 423 260 404V253H206V167Z" fill="#F2BE0C"/>
+
+  <path d="M413 371C420 304 474 254 542 254H588V336H542C518 336 498 353 494 377C490 403 507 428 531 434C537 436 544 437 550 437H658C652 515 588 574 510 574C423 574 352 503 352 416C352 400 354 385 358 370H413V371Z" fill="#077A4E"/>
+
+  <circle cx="449" cy="414" r="31" fill="#077A4E"/>
+  <circle cx="619" cy="576" r="30" fill="#F2BE0C"/>
+
+  <text x="82" y="690" fill="#0452C9" font-family="Arial, sans-serif" font-size="86" font-weight="900">GROUP OPC</text>
+</svg>

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ShoppingCart, Plus, X, Minus, Check, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAppContext } from './AppContext';
-import { LEHMUHN_ADD_ONS, getAllowedSizesByStoreType } from '../config/menuRules';
+import { LEHMUHN_ADD_ONS, SIZE_LABELS, getAllowedSizesByStoreType } from '../config/menuRules';
 import type {
   AddOnOption,
   CartItem,
@@ -334,7 +334,7 @@ function ProductDetailSheet({
           {/* Size */}
           {allowedSizes.length > 0 && (
             <div className="mt-5">
-              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Size (oz)</h4>
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Size</h4>
               <div className="flex gap-2">
                 {allowedSizes.map(size => (
                 <button
@@ -347,8 +347,8 @@ function ProductDetailSheet({
                   }`}
                   style={{ fontWeight: sizeOz === size ? 600 : 400 }}
                 >
-                  {size}oz
-                  <span className="block text-[11px] opacity-70">&#8369;{getPriceForSize(product, size)}</span>
+                  {SIZE_LABELS[size]}
+                  <span className="block text-[11px] opacity-70">{size}oz — &#8369;{getPriceForSize(product, size)}</span>
                 </button>
               ))}
               </div>

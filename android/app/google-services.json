@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "703589699911",
+    "project_id": "bjc-app-788dc",
+    "storage_bucket": "bjc-app-788dc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:703589699911:android:999f91478e225fb874bc62",
+        "android_client_info": {
+          "package_name": "com.bjc.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "703589699911-f35g4c34ceh7jjo9ihi3a5u8jutl5elf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFmWl5IluwuQwO0u_gKZLcAIj9SZfKpeM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "703589699911-f35g4c34ceh7jjo9ihi3a5u8jutl5elf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

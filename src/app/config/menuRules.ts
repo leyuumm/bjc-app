@@ -6,6 +6,12 @@ import type {
   StoreId,
 } from '../types/menu';
 
+export const SIZE_LABELS: Record<SizeOz, string> = {
+  12: 'Tall',
+  16: 'Grande',
+  22: 'Extra Grande',
+};
+
 export const MENU_SIZE_RULES: {
   lehmuhn: Record<LehMuhnDrinkType, SizeOz[]>;
   kohfee: Record<KohFeeMenuGroup, SizeOz[]>;

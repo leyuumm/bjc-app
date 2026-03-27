@@ -4,12 +4,16 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Minus, Plus, Trash2, Tag, ShoppingBag } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
+import { SIZE_LABELS } from '../config/menuRules';
 
 export function CartPage() {
   const navigate = useNavigate();
   const { cart, updateCartQuantity, removeFromCart } = useAppContext();
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
+
+  const VALID_PROMO_CODES = ['BJC10', 'WELCOME10', 'FIRSTORDER'];
 
   const subtotal = cart.reduce((sum, item) => sum + getCartItemLineTotal(item), 0);
 
@@ -69,7 +73,7 @@ export function CartPage() {
                       {item.selectedSubGroup ? ` • ${item.selectedSubGroup === 'NON_COFFEE' ? 'NON-COFFEE' : item.selectedSubGroup}` : ''}
                     </p>
                     {item.selectedSizeOz && (
-                      <p className="text-[11px] text-[#757575]">Size: {item.selectedSizeOz}oz</p>
+                      <p className="text-[11px] text-[#757575]">Size: {SIZE_LABELS[item.selectedSizeOz]} ({item.selectedSizeOz}oz)</p>
                     )}
                     {item.addOns.length > 0 && (
                       <p className="text-[11px] text-[#00704A]">Add-ons: {item.addOns.map(addOn => addOn.name).join(', ')}</p>
@@ -127,13 +131,25 @@ export function CartPage() {
           className="flex-1 text-[14px] outline-none"
         />
         <button
-          onClick={() => { if (promoCode) setPromoApplied(true); }}
+          onClick={() => {
+            if (!promoCode.trim()) return;
+            if (VALID_PROMO_CODES.includes(promoCode.trim().toUpperCase())) {
+              setPromoApplied(true);
+              setPromoError('');
+            } else {
+              setPromoApplied(false);
+              setPromoError('Invalid promo code');
+            }
+          }}
           className="px-4 py-1.5 rounded-[8px] bg-[#00704A] text-white text-[13px] cursor-pointer"
           style={{ fontWeight: 500 }}
         >
           Apply
         </button>
       </div>
+      {promoError && (
+        <p className="text-[12px] text-[#D32F2F] mt-1 mb-4">{promoError}</p>
+      )}
 
       {/* Order Summary */}
       <div className="rounded-[16px] bg-[#F5F5F5] p-4 mb-6">

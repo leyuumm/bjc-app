@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check, AlertCircle } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { createPaymongoCheckout } from '../lib/paymongo';
@@ -9,11 +9,12 @@ import type { PaymentMethod } from '../types/order';
 
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const { cart, clearCart, addOrder } = useAppContext();
+  const { cart, clearCart, addOrder, selectedBrand, selectedBranch } = useAppContext();
   const [orderType, setOrderType] = useState<'advance' | 'onsite'>('advance');
   const [pickupTime, setPickupTime] = useState('10:30 AM');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PAY_AT_STORE');
   const [submitting, setSubmitting] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const subtotal = cart.reduce((sum, item) => sum + getCartItemLineTotal(item), 0);
 
@@ -29,8 +30,19 @@ export function CheckoutPage() {
       return;
     }
 
+    if (!selectedBrand || !selectedBranch) {
+      setValidationError('Please select a store and branch before placing an order.');
+      return;
+    }
+
+    if (orderType === 'advance' && !pickupTime) {
+      setValidationError('Please select a pickup time for your advance order.');
+      return;
+    }
+
+    setValidationError('');
     setSubmitting(true);
-    const orderId = `BJC-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`;
+    const orderId = `BJC-${Date.now().toString(36).toUpperCase().slice(-4)}${String(Math.floor(Math.random() * 99)).padStart(2, '0')}`;
 
     let paymentStatus: 'UNPAID' | 'PAID' | 'FAILED' | 'PENDING' = 'UNPAID';
     let statusMessage = 'Prepare once you arrived in the store';
@@ -54,12 +66,14 @@ export function CheckoutPage() {
       }
     }
 
+    const displayTime = orderType === 'onsite' ? 'Now' : pickupTime;
+
     addOrder({
       id: orderId,
       items: cart,
       total: subtotal,
       status,
-      time: pickupTime,
+      time: displayTime,
       customerName: 'You',
       orderType: orderType === 'advance' ? 'Advance Order' : 'On-site',
       paymentMethod,
@@ -83,6 +97,14 @@ export function CheckoutPage() {
         </button>
         <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Checkout</h1>
       </div>
+
+      {/* Validation Error */}
+      {validationError && (
+        <div className="mb-4 p-3 rounded-[12px] bg-[#FFEBEE] border border-[#EF9A9A] flex items-start gap-2">
+          <AlertCircle size={18} color="#D32F2F" className="mt-0.5 shrink-0" />
+          <p className="text-[13px] text-[#D32F2F]">{validationError}</p>
+        </div>
+      )}
 
       {/* Order Type */}
       <div className="mb-6">

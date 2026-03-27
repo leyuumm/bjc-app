@@ -1,0 +1,113 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper functions ───────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+
+    function isCashier() {
+      return isAuthenticated() && (getUserRole() == 'CASHIER' || getUserRole() == 'ADMIN');
+    }
+
+    function isCustomer() {
+      return isAuthenticated() && getUserRole() == 'CUSTOMER';
+    }
+
+    // ─── Users ──────────────────────────────────────────────────────
+    // Users can read/write their own profile. Admins can read all.
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Stores ─────────────────────────────────────────────────────
+    // Public read. Only admins can write.
+
+    match /stores/{storeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Branches ───────────────────────────────────────────────────
+    // Public read. Only admins can write.
+
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Product Categories ─────────────────────────────────────────
+    // Public read. Only admins can write.
+
+    match /productCategories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Products ───────────────────────────────────────────────────
+    // Public read. Only admins can write.
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Orders ─────────────────────────────────────────────────────
+    // Customers can create orders and read their own orders.
+    // Cashiers/Admins can read all orders and update status.
+
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() &&
+        (isOwner(resource.data.userId) || isCashier());
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid;
+      allow update: if isCashier() ||
+        // Customer can cancel their own pending order
+        (isOwner(resource.data.userId) &&
+         resource.data.status == 'Pending' &&
+         request.resource.data.status == 'Cancelled');
+      allow delete: if isAdmin();
+    }
+
+    // ─── Payments ───────────────────────────────────────────────────
+    // Customers can read their order's payment. Cashiers/Admins can read/write.
+
+    match /payments/{paymentId} {
+      allow read: if isAuthenticated() && (
+        isCashier() ||
+        get(/databases/$(database)/documents/orders/$(resource.data.orderId)).data.userId == request.auth.uid
+      );
+      allow create: if isAuthenticated();
+      allow update: if isCashier();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Notifications ──────────────────────────────────────────────
+    // Users can only read their own notifications.
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isCashier();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,7 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import type { User } from 'firebase/auth';
 import type { Order } from '../types/order';
 import type { CartItem, StoreId } from '../types/menu';
+import type { UserDoc } from '../types/firestore';
 import { sampleOrders } from './data';
+import { onAuthChange, getUserProfile } from '../services/auth';
 
 interface AppState {
   selectedBrand: StoreId | null;
@@ -20,6 +23,10 @@ interface AppState {
   setLoyaltyPoints: (p: number) => void;
   isLoggedIn: boolean;
   setIsLoggedIn: (v: boolean) => void;
+  firebaseUser: User | null;
+  userProfile: UserDoc | null;
+  authLoading: boolean;
+  resetState: () => void;
 }
 
 const AppContext = createContext<AppState>({} as AppState);
@@ -29,8 +36,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orders, setOrders] = useState<Order[]>(sampleOrders);
-  const [loyaltyPoints, setLoyaltyPoints] = useState(1250);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserDoc | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsub = onAuthChange(async (user) => {
+      setFirebaseUser(user);
+      if (user) {
+        setIsLoggedIn(true);
+        const profile = await getUserProfile(user.uid);
+        setUserProfile(profile);
+        if (profile) {
+          setLoyaltyPoints(profile.loyaltyPoints);
+        }
+      } else {
+        setIsLoggedIn(false);
+        setUserProfile(null);
+        setLoyaltyPoints(0);
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const addToCart = (item: CartItem) => {
     setCart(prev => {
@@ -53,6 +84,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const removeFromCart = (cartItemId: string) => setCart(prev => prev.filter(c => c.cartItemId !== cartItemId));
   const clearCart = () => setCart([]);
 
+  const resetState = () => {
+    setSelectedBrand(null);
+    setSelectedBranch(null);
+    setCart([]);
+    setOrders([]);
+    setLoyaltyPoints(0);
+  };
+
   const addOrder = (order: Order) => setOrders(prev => [order, ...prev]);
   const updateOrderStatus = (id: string, status: Order['status']) => {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
@@ -66,6 +105,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       orders, addOrder, updateOrderStatus,
       loyaltyPoints, setLoyaltyPoints,
       isLoggedIn, setIsLoggedIn,
+      firebaseUser, userProfile, authLoading,
+      resetState,
     }}>
       {children}
     </AppContext.Provider>

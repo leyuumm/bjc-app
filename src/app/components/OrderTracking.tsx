@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { CheckCircle2, Clock, ChefHat, Coffee, PartyPopper, AlertCircle } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
+import { SIZE_LABELS } from '../config/menuRules';
 
 const steps = [
   { label: 'Arrival', icon: Clock },
@@ -41,26 +42,34 @@ export function OrderTracking() {
 
   return (
     <div className="px-4 pt-12 pb-6">
-      {/* Success Animation */}
+      {/* Status Header */}
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: 'spring', delay: 0.2 }}
         className="flex flex-col items-center mb-8"
       >
-        <div className="w-20 h-20 rounded-full bg-[#E8F5E9] flex items-center justify-center mb-4">
+        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-4 ${
+          order.status === 'payment_failed' ? 'bg-[#FFEBEE]' : 'bg-[#E8F5E9]'
+        }`}>
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', delay: 0.5 }}
           >
-            <CheckCircle2 size={44} color="#00704A" />
+            {order.status === 'payment_failed'
+              ? <AlertCircle size={44} color="#D32F2F" />
+              : <CheckCircle2 size={44} color="#00704A" />}
           </motion.div>
         </div>
-        <h2 className="text-[20px] text-[#362415]" style={{ fontWeight: 700 }}>Order Placed!</h2>
+        <h2 className="text-[20px] text-[#362415]" style={{ fontWeight: 700 }}>
+          {order.status === 'payment_failed' ? 'Payment Failed' : 'Order Placed!'}
+        </h2>
         <p className="text-[14px] text-[#757575] mt-1">Order #{order.id}</p>
         <p className="text-[13px] text-[#757575]">Pickup at {order.time}</p>
-        <p className="text-[12px] text-[#00704A] mt-1">{order.statusMessage}</p>
+        <p className={`text-[12px] mt-1 ${order.status === 'payment_failed' ? 'text-[#D32F2F]' : 'text-[#00704A]'}`}>
+          {order.statusMessage}
+        </p>
       </motion.div>
 
       <div className="rounded-[12px] bg-[#F5F5F5] p-3 mb-4 flex items-center gap-2">
@@ -126,7 +135,7 @@ export function OrderTracking() {
           <div key={item.cartItemId} className="flex justify-between py-2 text-[14px]">
             <span className="text-[#362415]">
               {item.quantity}x {item.name}
-              {item.selectedSizeOz ? ` (${item.selectedSizeOz}oz)` : ''}
+              {item.selectedSizeOz ? ` (${SIZE_LABELS[item.selectedSizeOz]} ${item.selectedSizeOz}oz)` : ''}
             </span>
             <span className="text-[#757575]" style={{ fontWeight: 500 }}>&#8369;{getCartItemLineTotal(item)}</span>
           </div>
