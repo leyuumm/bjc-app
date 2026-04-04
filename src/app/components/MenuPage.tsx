@@ -309,6 +309,9 @@ function ProductDetailSheet({
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25 }}
         className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[412px] bg-white rounded-t-[24px] z-50 max-h-[85vh] overflow-y-auto"
+        style={{ overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        onClick={e => e.stopPropagation()}
+        onTouchMove={e => e.stopPropagation()}
       >
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -326,7 +329,7 @@ function ProductDetailSheet({
           </button>
         </div>
 
-        <div className="px-5 pt-4 pb-6">
+        <div className="px-5 pt-4 pb-10">
           <h2 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>{product.name}</h2>
           <p className="text-[14px] text-[#757575] mt-1">{product.description}</p>
           <p className="text-[20px] text-[#00704A] mt-2" style={{ fontWeight: 700 }}>&#8369;{basePrice}</p>

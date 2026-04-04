@@ -78,4 +78,5 @@ export interface Branch {
   hours: string;
   available: boolean;
   brand: StoreId;
+  image?: string;
 }
