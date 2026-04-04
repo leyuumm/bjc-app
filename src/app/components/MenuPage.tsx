@@ -300,7 +300,7 @@ function ProductDetailSheet({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 z-50"
+        className="fixed inset-0 bg-black/50 z-[60]"
         onClick={onClose}
       />
       <motion.div
@@ -308,16 +308,20 @@ function ProductDetailSheet({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25 }}
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[412px] bg-white rounded-t-[24px] z-50 max-h-[85vh] overflow-y-auto"
-        style={{ overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[412px] bg-white rounded-t-[24px] z-[60] flex flex-col"
+        style={{ maxHeight: '85vh' }}
         onClick={e => e.stopPropagation()}
-        onTouchMove={e => e.stopPropagation()}
       >
         {/* Handle */}
-        <div className="flex justify-center pt-3 pb-2">
+        <div className="flex justify-center pt-3 pb-2 shrink-0">
           <div className="w-10 h-1 rounded-full bg-[#E0E0E0]" />
         </div>
 
+        {/* Scrollable content */}
+        <div
+          className="flex-1 overflow-y-auto min-h-0"
+          style={{ overscrollBehaviorY: 'contain', WebkitOverflowScrolling: 'touch' }}
+        >
         {/* Image */}
         <div className="h-[200px] mx-4 rounded-[16px] overflow-hidden relative">
           <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
@@ -329,7 +333,7 @@ function ProductDetailSheet({
           </button>
         </div>
 
-        <div className="px-5 pt-4 pb-10">
+        <div className="px-5 pt-4 pb-4">
           <h2 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>{product.name}</h2>
           <p className="text-[14px] text-[#757575] mt-1">{product.description}</p>
           <p className="text-[20px] text-[#00704A] mt-2" style={{ fontWeight: 700 }}>&#8369;{basePrice}</p>
@@ -476,12 +480,15 @@ function ProductDetailSheet({
               </button>
             </div>
           </div>
+        </div>
+        </div>
 
-          {/* Add to Cart */}
+        {/* Sticky Add to Cart */}
+        <div className="shrink-0 px-5 pt-3 pb-6 bg-white border-t border-[rgba(0,0,0,0.06)]">
           <button
             onClick={handleAdd}
             disabled={!fruitRequirementMet}
-            className="w-full py-4 rounded-[16px] text-white text-[16px] mt-6 cursor-pointer"
+            className="w-full py-4 rounded-[16px] text-white text-[16px] cursor-pointer"
             style={{
               background: '#00704A',
               fontWeight: 600,
