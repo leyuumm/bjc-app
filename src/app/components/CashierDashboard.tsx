@@ -1,9 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { SIZE_LABELS } from '../config/menuRules';
-import type { Order } from '../types/order';
+import { onBranchOrdersSnapshot, updateOrderStatus as updateFirestoreOrderStatus, sendNotification } from '../services/firestore';
+import type { OrderDoc, OrderStatusEnum } from '../types/firestore';
+import type { Order, OrderStatus } from '../types/order';
+import type { CartItem, StoreId } from '../types/menu';
+
+const firestoreStatusToLocal: Record<OrderStatusEnum, OrderStatus> = {
+  'Pending': 'waiting_for_arrival',
+  'In Progress': 'preparing',
+  'Ready': 'ready',
+  'Completed': 'completed',
+  'Cancelled': 'payment_failed',
+};
+
+const localStatusToFirestore: Record<string, OrderStatusEnum> = {
+  waiting_for_arrival: 'Pending',
+  preparing: 'In Progress',
+  ready: 'Ready',
+  completed: 'Completed',
+  payment_failed: 'Cancelled',
+};
+
+function mapOrderDocToOrder(d: OrderDoc): Order {
+  const status = firestoreStatusToLocal[d.status];
+  const statusMessages: Record<OrderStatus, string> = {
+    waiting_for_arrival: 'Prepare once you arrived in the store',
+    preparing: "We're now processing your order",
+    ready: 'Your order is ready for pickup!',
+    completed: 'Order completed. Thank you!',
+    payment_failed: 'Online payment failed.',
+  };
+  return {
+    id: d.orderId,
+    items: d.orderDetails.map(item => ({
+      cartItemId: item.orderItemId,
+      productId: item.productId,
+      storeId: 'lehmuhn' as StoreId,
+      name: item.customizations.find(c => c.optionType === 'productName')?.optionValue ?? item.productId,
+      description: '',
+      image: item.customizations.find(c => c.optionType === 'image')?.optionValue ?? '',
+      basePrice: Number(item.customizations.find(c => c.optionType === 'basePrice')?.extraCost ?? 0),
+      quantity: item.quantity,
+      isPremium: false,
+      selectedSizeOz: item.customizations.find(c => c.optionType === 'size')
+        ? Number(item.customizations.find(c => c.optionType === 'size')!.optionValue) as CartItem['selectedSizeOz']
+        : undefined,
+      addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
+        id: c.optionId,
+        name: c.name,
+        extraCost: c.extraCost,
+      })),
+      toppingsRemoved: item.customizations.some(c => c.optionType === 'toppingsRemoved' && c.optionValue === 'true'),
+    })),
+    total: d.total,
+    status,
+    time: d.timestamp instanceof Date
+      ? d.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+      : 'Now',
+    customerName: d.customerName,
+    orderType: d.orderType,
+    paymentMethod: d.paymentMethod as Order['paymentMethod'],
+    paymentStatus: d.paymentStatus as Order['paymentStatus'],
+    statusMessage: statusMessages[status],
+  };
+}
 
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
   waiting_for_arrival: { bg: '#FFF3E0', text: '#E65100', border: '#FFB74D' },
@@ -32,8 +95,46 @@ const nextStatus: Record<string, Order['status'] | null> = {
 const filterTabs = ['All', 'Waiting', 'Preparing', 'Ready', 'Completed'];
 
 export function CashierDashboard() {
-  const { orders, updateOrderStatus } = useAppContext();
+  const { userProfile } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderDocs, setOrderDocs] = useState<OrderDoc[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const branchId = userProfile?.assignedBranchId ?? '';
+
+  useEffect(() => {
+    if (!branchId) {
+      setLoading(false);
+      return;
+    }
+    const unsub = onBranchOrdersSnapshot(branchId, (docs) => {
+      setOrderDocs(docs);
+      setOrders(docs.map(mapOrderDocToOrder));
+      setLoading(false);
+    });
+    return unsub;
+  }, [branchId]);
+
+  const handleUpdateStatus = async (orderId: string, newLocalStatus: OrderStatus) => {
+    const firestoreStatus = localStatusToFirestore[newLocalStatus];
+    if (!firestoreStatus) return;
+    await updateFirestoreOrderStatus(orderId, firestoreStatus);
+
+    // Find the order doc to get userId
+    const orderDoc = orderDocs.find(d => d.orderId === orderId);
+    if (orderDoc) {
+      const messages: Record<string, string> = {
+        preparing: `Your order #${orderId} is now being prepared!`,
+        ready: `Your order #${orderId} is ready for pickup!`,
+        completed: `Your order #${orderId} has been completed. Thank you!`,
+      };
+      const msg = messages[newLocalStatus];
+      if (msg) {
+        sendNotification(orderDoc.userId, msg);
+      }
+    }
+  };
 
   const filtered = activeFilter === 'All'
     ? orders
@@ -44,6 +145,20 @@ export function CashierDashboard() {
       <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Cashier Dashboard</h1>
       <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Manage incoming orders</p>
 
+      {!branchId && (
+        <div className="text-center py-12">
+          <p className="text-[#757575] text-[14px]">No branch assigned. Contact admin.</p>
+        </div>
+      )}
+
+      {branchId && loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} color="#00704A" className="animate-spin" />
+        </div>
+      )}
+
+      {branchId && !loading && (
+      <>
       {/* Filter Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-3 -mx-4 px-4 no-scrollbar">
         {filterTabs.map(tab => (
@@ -139,7 +254,7 @@ export function CashierDashboard() {
 
               {next && (
                 <button
-                  onClick={() => updateOrderStatus(order.id, next)}
+                  onClick={() => handleUpdateStatus(order.id, next)}
                   className="w-full flex items-center justify-center gap-2 py-2.5 rounded-[12px] text-white text-[14px] cursor-pointer"
                   style={{ background: '#00704A', fontWeight: 600 }}
                 >
@@ -156,6 +271,8 @@ export function CashierDashboard() {
         <div className="text-center py-12">
           <p className="text-[#757575] text-[14px]">No orders in this category</p>
         </div>
+      )}
+      </>
       )}
     </div>
   );

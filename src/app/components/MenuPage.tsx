@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, Plus, X, Minus, Check, Sparkles } from 'lucide-react';
+import { ShoppingCart, Plus, X, Minus, Check, Sparkles, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { useAppContext } from './AppContext';
 import { LEHMUHN_ADD_ONS, SIZE_LABELS, getAllowedSizesByStoreType } from '../config/menuRules';
@@ -13,8 +13,45 @@ import type {
   Product,
   SizeOz,
 } from '../types/menu';
-import { getPriceForSize, products } from './data';
+import type { ProductDoc } from '../types/firestore';
+import { getPriceForSize } from './data';
+import { getProductsByStore } from '../services/firestore';
 import { cn } from './ui/utils';
+
+function mapProductDocToProduct(doc: ProductDoc): Product {
+  const meta = (doc.meta ?? {}) as Record<string, unknown>;
+  const base = {
+    id: doc.productId,
+    name: doc.productName,
+    basePrice: doc.price,
+    image: doc.imageUrl,
+    description: (meta.description as string) ?? '',
+    isPremium: (meta.isPremium as boolean) ?? false,
+    priceBySizeOz: meta.priceBySizeOz as Partial<Record<SizeOz, number>> | undefined,
+    defaultToppingsLabel: meta.defaultToppingsLabel as string | undefined,
+    defaultToppingsCost: meta.defaultToppingsCost as number | undefined,
+  };
+
+  if (doc.storeId === 'lehmuhn') {
+    return {
+      ...base,
+      storeId: 'lehmuhn',
+      drinkType: (meta.drinkType as LehMuhnDrinkType) ?? 'COLD',
+      allowedDrinkTypes: meta.allowedDrinkTypes as LehMuhnDrinkType[] | undefined,
+      hotOptions: meta.hotOptions as string[] | undefined,
+      requiresFruitSelection: meta.requiresFruitSelection as Product extends { requiresFruitSelection?: infer R } ? R : never,
+    } as Product;
+  }
+
+  return {
+    ...base,
+    storeId: 'kohfee',
+    menuGroup: (meta.menuGroup as KohFeeMenuGroup) ?? 'COLD',
+    subGroup: meta.subGroup as KohFeeSubGroup | undefined,
+    isFood: (meta.isFood as boolean) ?? false,
+    allowedMenuGroups: meta.allowedMenuGroups as KohFeeMenuGroup[] | undefined,
+  } as Product;
+}
 
 const LEHMUHN_TABS: LehMuhnDrinkType[] = ['HOT', 'COLD', 'BLENDED', 'SPARKLING'];
 const KOHFEE_TABS: KohFeeMenuGroup[] = ['COLD', 'HOT', 'BLENDED', 'FOOD'];
@@ -27,6 +64,21 @@ export function MenuPage() {
   const [activeKohfeeGroup, setActiveKohfeeGroup] = useState<KohFeeMenuGroup>('COLD');
   const [activeKohfeeSubGroup, setActiveKohfeeSubGroup] = useState<KohFeeSubGroup>('COFFEE');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!selectedBrand) return;
+    let cancelled = false;
+    setLoading(true);
+    getProductsByStore(selectedBrand).then((docs) => {
+      if (!cancelled) {
+        setProducts(docs.map(mapProductDocToProduct));
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [selectedBrand]);
 
   const brandProducts = products.filter(p => p.storeId === selectedBrand);
   const isLehmuhn = selectedBrand === 'lehmuhn';
@@ -129,6 +181,20 @@ export function MenuPage() {
       </div>
 
       {/* Product Grid */}
+      {loading ? (
+        <div className="px-4 pt-4 pb-4 grid grid-cols-2 gap-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-[16px] bg-white overflow-hidden animate-pulse" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+              <div className="h-[120px] bg-[#E0E0E0]" />
+              <div className="p-3 space-y-2">
+                <div className="h-4 bg-[#E0E0E0] rounded w-3/4" />
+                <div className="h-3 bg-[#E0E0E0] rounded w-1/2" />
+                <div className="h-4 bg-[#E0E0E0] rounded w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="px-4 pt-4 pb-4 grid grid-cols-2 gap-3">
         {filteredProducts.map((product, i) => (
           <motion.button
@@ -165,6 +231,7 @@ export function MenuPage() {
           </motion.button>
         ))}
       </div>
+      )}
 
       {/* Product Detail Bottom Sheet */}
       <AnimatePresence>

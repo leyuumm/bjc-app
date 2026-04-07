@@ -1,14 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Search, ArrowLeft, Clock, MapPin, CheckCircle2, XCircle } from 'lucide-react';
+import { Search, ArrowLeft, Clock, MapPin, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useAppContext } from './AppContext';
-import { branches } from './data';
+import { getStoreBranches } from '../services/firestore';
+import type { BranchDoc } from '../types/firestore';
+import type { Branch } from '../types/menu';
 
 export function BranchSelection() {
   const navigate = useNavigate();
   const { selectedBrand, setSelectedBranch } = useAppContext();
   const [search, setSearch] = useState('');
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!selectedBrand) return;
+    let cancelled = false;
+    setLoading(true);
+    getStoreBranches(selectedBrand).then((docs: BranchDoc[]) => {
+      if (!cancelled) {
+        setBranches(docs.map(d => ({
+          id: d.branchId,
+          name: d.branchName,
+          address: d.address,
+          hours: d.operatingHours,
+          available: d.isActive,
+          brand: d.storeId as Branch['brand'],
+        })));
+        setLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [selectedBrand]);
 
   const filtered = branches
     .filter(b => b.brand === selectedBrand)
@@ -46,6 +70,17 @@ export function BranchSelection() {
       </div>
 
       {/* Branch Cards */}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="rounded-[16px] p-4 bg-white border border-[rgba(0,0,0,0.08)] animate-pulse">
+              <div className="h-5 bg-[#E0E0E0] rounded w-3/4 mb-2" />
+              <div className="h-4 bg-[#E0E0E0] rounded w-full mb-1" />
+              <div className="h-4 bg-[#E0E0E0] rounded w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="space-y-3">
         {filtered.map((branch, i) => (
           <motion.button
@@ -91,6 +126,7 @@ export function BranchSelection() {
           </motion.button>
         ))}
       </div>
+      )}
     </div>
   );
 }

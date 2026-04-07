@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { Clock, ChefHat, Coffee, CheckCircle2, ChevronRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Clock, ChefHat, Coffee, CheckCircle2, ChevronRight, AlertCircle } from 'lucide-react';
 import { useAppContext } from './AppContext';
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -53,19 +53,6 @@ export function OrdersPage() {
           </button>
         ))}
       </div>
-
-      {/* Cashier Mode Link */}
-      <button
-        onClick={() => navigate('/cashier')}
-        className="w-full flex items-center gap-3 p-3 rounded-[12px] bg-[#362415] text-white mb-4 cursor-pointer"
-      >
-        <ShieldCheck size={20} />
-        <div className="flex-1 text-left">
-          <p className="text-[14px]" style={{ fontWeight: 600 }}>Cashier Dashboard</p>
-          <p className="text-[11px] text-white/60">Manage orders as staff</p>
-        </div>
-        <ChevronRight size={18} className="text-white/60" />
-      </button>
 
       {/* Order List */}
       <div className="space-y-3">

@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Home, Coffee, ClipboardList, Gift, User } from 'lucide-react';
+import { Home, Coffee, ClipboardList, Gift, User, LayoutDashboard, Package } from 'lucide-react';
+import { useAppContext } from './AppContext';
 
-const tabs = [
+const customerTabs = [
   { label: 'Home', icon: Home, path: '/home' },
   { label: 'Menu', icon: Coffee, path: '/menu' },
   { label: 'Orders', icon: ClipboardList, path: '/orders' },
@@ -10,9 +11,22 @@ const tabs = [
   { label: 'Profile', icon: User, path: '/profile' },
 ];
 
+const adminTabs = [
+  { label: 'Products', icon: Package, path: '/admin' },
+  { label: 'Profile', icon: User, path: '/profile' },
+];
+
 export function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { userProfile } = useAppContext();
+
+  const role = userProfile?.role ?? 'CUSTOMER';
+
+  // Cashier gets no bottom nav
+  if (role === 'CASHIER') return null;
+
+  const tabs = role === 'ADMIN' ? adminTabs : customerTabs;
 
   return (
     <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[412px] bg-white border-t border-[rgba(0,0,0,0.12)] z-50"

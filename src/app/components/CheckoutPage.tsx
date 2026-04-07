@@ -5,11 +5,14 @@ import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check, AlertCircle } from 
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { createPaymongoCheckout } from '../lib/paymongo';
+import { createOrder, sendNotification } from '../services/firestore';
+import type { OrderItemDoc, CustomizationDoc } from '../types/firestore';
 import type { PaymentMethod } from '../types/order';
+import type { CartItem } from '../types/menu';
 
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const { cart, clearCart, addOrder, selectedBrand, selectedBranch } = useAppContext();
+  const { cart, clearCart, addOrder, selectedBrand, selectedBranch, firebaseUser, userProfile } = useAppContext();
   const [orderType, setOrderType] = useState<'advance' | 'onsite'>('advance');
   const [pickupTime, setPickupTime] = useState('10:30 AM');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PAY_AT_STORE');
@@ -42,14 +45,38 @@ export function CheckoutPage() {
 
     setValidationError('');
     setSubmitting(true);
-    const orderId = `BJC-${Date.now().toString(36).toUpperCase().slice(-4)}${String(Math.floor(Math.random() * 99)).padStart(2, '0')}`;
+
+    function mapCartToOrderItems(items: CartItem[]): OrderItemDoc[] {
+      return items.map(item => {
+        const customizations: CustomizationDoc[] = [];
+        customizations.push({ optionId: 'name', productId: item.productId, name: 'Product Name', optionType: 'productName', optionValue: item.name, extraCost: 0 });
+        customizations.push({ optionId: 'img', productId: item.productId, name: 'Image', optionType: 'image', optionValue: item.image, extraCost: 0 });
+        customizations.push({ optionId: 'bp', productId: item.productId, name: 'Base Price', optionType: 'basePrice', optionValue: String(item.basePrice), extraCost: item.basePrice });
+        if (item.selectedSizeOz) {
+          customizations.push({ optionId: `size-${item.selectedSizeOz}`, productId: item.productId, name: `Size ${item.selectedSizeOz}oz`, optionType: 'size', optionValue: String(item.selectedSizeOz), extraCost: 0 });
+        }
+        if (item.toppingsRemoved) {
+          customizations.push({ optionId: 'toppings-removed', productId: item.productId, name: 'Toppings Removed', optionType: 'toppingsRemoved', optionValue: 'true', extraCost: 0 });
+        }
+        for (const addOn of item.addOns) {
+          customizations.push({ optionId: addOn.id, productId: item.productId, name: addOn.name, optionType: 'addOn', optionValue: addOn.name, extraCost: addOn.extraCost });
+        }
+        return {
+          orderItemId: item.cartItemId,
+          productId: item.productId,
+          quantity: item.quantity,
+          customizations,
+        };
+      });
+    }
 
     let paymentStatus: 'UNPAID' | 'PAID' | 'FAILED' | 'PENDING' = 'UNPAID';
     let statusMessage = 'Prepare once you arrived in the store';
     let status: 'waiting_for_arrival' | 'preparing' | 'payment_failed' = 'waiting_for_arrival';
 
     if (paymentMethod === 'ONLINE_PAYMONGO') {
-      const result = await createPaymongoCheckout({ id: orderId, total: subtotal, items: cart });
+      const tempId = `BJC-${Date.now().toString(36).toUpperCase().slice(-4)}${String(Math.floor(Math.random() * 99)).padStart(2, '0')}`;
+      const result = await createPaymongoCheckout({ id: tempId, total: subtotal, items: cart });
 
       if (result.status === 'PAID') {
         paymentStatus = 'PAID';
@@ -67,6 +94,27 @@ export function CheckoutPage() {
     }
 
     const displayTime = orderType === 'onsite' ? 'Now' : pickupTime;
+    const userId = firebaseUser?.uid ?? '';
+    const customerName = userProfile?.name ?? 'Customer';
+
+    // Write to Firestore
+    const orderDoc = await createOrder(
+      userId,
+      selectedBranch!,
+      mapCartToOrderItems(cart),
+      subtotal,
+      paymentMethod,
+      paymentStatus,
+      customerName,
+      orderType === 'advance' ? 'Advance Order' : 'On-site',
+    );
+
+    const orderId = orderDoc.orderId;
+
+    // Send notification
+    if (userId && paymentStatus !== 'FAILED') {
+      sendNotification(userId, `Your order #${orderId} has been placed!`);
+    }
 
     addOrder({
       id: orderId,
@@ -74,7 +122,7 @@ export function CheckoutPage() {
       total: subtotal,
       status,
       time: displayTime,
-      customerName: 'You',
+      customerName,
       orderType: orderType === 'advance' ? 'Advance Order' : 'On-site',
       paymentMethod,
       paymentStatus,

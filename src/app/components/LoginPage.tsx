@@ -9,6 +9,7 @@ import {
   registerWithEmail,
   loginWithGoogle,
   updateUserProfile,
+  getUserProfile,
   validateEmail,
   validatePassword,
   validateName,
@@ -16,6 +17,7 @@ import {
   getAuthErrorMessage,
   logout,
 } from '../services/auth';
+import type { UserRole } from '../types/firestore';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -39,6 +41,14 @@ export function LoginPage() {
   // Google profile completion
   const [googleProfileMode, setGoogleProfileMode] = useState(false);
   const [googleUid, setGoogleUid] = useState('');
+
+  const navigateByRole = (role: UserRole) => {
+    switch (role) {
+      case 'CASHIER': navigate('/cashier'); break;
+      case 'ADMIN': navigate('/admin'); break;
+      default: navigate('/home');
+    }
+  };
 
   const clearErrors = () => {
     setErrors({});
@@ -90,10 +100,11 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      await loginWithEmail(email, password);
+      const user = await loginWithEmail(email, password);
       setIsLoggedIn(true);
+      const profile = await getUserProfile(user.uid);
       toast.success('Login successful! Welcome back.');
-      navigate('/home');
+      navigateByRole(profile?.role ?? 'CUSTOMER');
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
       setGeneralError(getAuthErrorMessage(code));
@@ -141,8 +152,9 @@ export function LoginPage() {
         return;
       }
       setIsLoggedIn(true);
+      const profile = await getUserProfile(result.user.uid);
       toast.success('Login successful! Welcome back.');
-      navigate('/home');
+      navigateByRole(profile?.role ?? 'CUSTOMER');
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
       setGeneralError(getAuthErrorMessage(code));
@@ -181,8 +193,9 @@ export function LoginPage() {
       });
       setGoogleProfileMode(false);
       setIsLoggedIn(true);
+      const profile = await getUserProfile(googleUid);
       toast.success('Profile complete! Welcome to BJC.');
-      navigate('/home');
+      navigateByRole(profile?.role ?? 'CUSTOMER');
     } catch {
       setGeneralError('Failed to save profile. Please try again.');
     } finally {

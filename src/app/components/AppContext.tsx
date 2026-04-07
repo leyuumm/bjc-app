@@ -1,10 +1,65 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import type { User } from 'firebase/auth';
-import type { Order } from '../types/order';
+import type { Order, OrderStatus } from '../types/order';
 import type { CartItem, StoreId } from '../types/menu';
-import type { UserDoc } from '../types/firestore';
-import { sampleOrders } from './data';
+import type { NotificationDoc, OrderDoc, UserDoc } from '../types/firestore';
 import { onAuthChange, getUserProfile } from '../services/auth';
+import { onOrdersSnapshot, onUserNotificationsSnapshot } from '../services/firestore';
+
+// ─── Status mapping helpers ────────────────────────────────────────
+
+const orderDocStatusToLocal: Record<OrderDoc['status'], OrderStatus> = {
+  'Pending': 'waiting_for_arrival',
+  'In Progress': 'preparing',
+  'Ready': 'ready',
+  'Completed': 'completed',
+  'Cancelled': 'payment_failed',
+};
+
+function mapOrderDocToOrder(d: OrderDoc): Order {
+  const status = orderDocStatusToLocal[d.status];
+  const statusMessages: Record<OrderStatus, string> = {
+    waiting_for_arrival: 'Prepare once you arrived in the store',
+    preparing: "We're now processing your order",
+    ready: 'Your order is ready for pickup!',
+    completed: 'Order completed. Thank you!',
+    payment_failed: 'Online payment failed. Please try again or switch to Pay at Store.',
+  };
+
+  return {
+    id: d.orderId,
+    items: d.orderDetails.map(item => ({
+      cartItemId: item.orderItemId,
+      productId: item.productId,
+      storeId: 'lehmuhn' as StoreId,
+      name: item.customizations.find(c => c.optionType === 'productName')?.optionValue ?? item.productId,
+      description: '',
+      image: item.customizations.find(c => c.optionType === 'image')?.optionValue ?? '',
+      basePrice: Number(item.customizations.find(c => c.optionType === 'basePrice')?.extraCost ?? 0),
+      quantity: item.quantity,
+      isPremium: false,
+      selectedSizeOz: item.customizations.find(c => c.optionType === 'size')
+        ? Number(item.customizations.find(c => c.optionType === 'size')!.optionValue) as CartItem['selectedSizeOz']
+        : undefined,
+      addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
+        id: c.optionId,
+        name: c.name,
+        extraCost: c.extraCost,
+      })),
+      toppingsRemoved: item.customizations.some(c => c.optionType === 'toppingsRemoved' && c.optionValue === 'true'),
+    })),
+    total: d.total,
+    status,
+    time: d.timestamp instanceof Date
+      ? d.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+      : 'Now',
+    customerName: d.customerName,
+    orderType: d.orderType,
+    paymentMethod: d.paymentMethod as Order['paymentMethod'],
+    paymentStatus: d.paymentStatus as Order['paymentStatus'],
+    statusMessage: statusMessages[status],
+  };
+}
 
 interface AppState {
   selectedBrand: StoreId | null;
@@ -26,6 +81,8 @@ interface AppState {
   firebaseUser: User | null;
   userProfile: UserDoc | null;
   authLoading: boolean;
+  notifications: NotificationDoc[];
+  unreadNotificationsCount: number;
   resetState: () => void;
 }
 
@@ -35,12 +92,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selectedBrand, setSelectedBrand] = useState<StoreId | null>(null);
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [orders, setOrders] = useState<Order[]>(sampleOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserDoc | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+
+  const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -57,11 +117,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsLoggedIn(false);
         setUserProfile(null);
         setLoyaltyPoints(0);
+        setOrders([]);
+        setNotifications([]);
       }
       setAuthLoading(false);
     });
     return unsub;
   }, []);
+
+  // Subscribe to realtime orders when user is logged in
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = onOrdersSnapshot(firebaseUser.uid, (orderDocs) => {
+      setOrders(orderDocs.map(mapOrderDocToOrder));
+    });
+    return unsub;
+  }, [firebaseUser]);
+
+  // Subscribe to realtime notifications when user is logged in
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = onUserNotificationsSnapshot(firebaseUser.uid, (notifs) => {
+      setNotifications(notifs);
+    });
+    return unsub;
+  }, [firebaseUser]);
 
   const addToCart = (item: CartItem) => {
     setCart(prev => {
@@ -89,6 +169,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setSelectedBranch(null);
     setCart([]);
     setOrders([]);
+    setNotifications([]);
     setLoyaltyPoints(0);
   };
 
@@ -106,6 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       loyaltyPoints, setLoyaltyPoints,
       isLoggedIn, setIsLoggedIn,
       firebaseUser, userProfile, authLoading,
+      notifications, unreadNotificationsCount,
       resetState,
     }}>
       {children}

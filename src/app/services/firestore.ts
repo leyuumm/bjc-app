@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -237,4 +238,57 @@ export async function updateLoyaltyPoints(userId: string, points: number): Promi
 
 export async function seedDocument(collectionName: string, docId: string, data: Record<string, unknown>): Promise<void> {
   await setDoc(doc(db, collectionName, docId), data, { merge: true });
+}
+
+// ─── Realtime listeners ────────────────────────────────────────────
+
+export function onBranchOrdersSnapshot(
+  branchId: string,
+  callback: (orders: OrderDoc[]) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, ORDERS),
+    where('branchId', '==', branchId),
+    orderBy('timestamp', 'desc'),
+  );
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => d.data() as OrderDoc));
+  });
+}
+
+export function onUserNotificationsSnapshot(
+  userId: string,
+  callback: (notifications: NotificationDoc[]) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, NOTIFICATIONS),
+    where('userId', '==', userId),
+    orderBy('timestamp', 'desc'),
+  );
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => d.data() as NotificationDoc));
+  });
+}
+
+export function onOrderSnapshot(
+  orderId: string,
+  callback: (order: OrderDoc | null) => void,
+): Unsubscribe {
+  return onSnapshot(doc(db, ORDERS, orderId), snap => {
+    callback(snap.exists() ? (snap.data() as OrderDoc) : null);
+  });
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  await deleteDoc(doc(db, PRODUCTS, productId));
+}
+
+export function onProductsSnapshot(
+  storeId: string,
+  callback: (products: ProductDoc[]) => void,
+): Unsubscribe {
+  const q = query(collection(db, PRODUCTS), where('storeId', '==', storeId));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => d.data() as ProductDoc));
+  });
 }

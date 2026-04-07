@@ -12,6 +12,7 @@ import { OrdersPage } from './components/OrdersPage';
 import { CashierDashboard } from './components/CashierDashboard';
 import { RewardsPage } from './components/RewardsPage';
 import { ProfilePage } from './components/ProfilePage';
+import { AdminDashboard } from './components/AdminDashboard';
 
 export const router = createBrowserRouter([
   {
@@ -37,6 +38,7 @@ export const router = createBrowserRouter([
       { path: 'cashier', Component: CashierDashboard },
       { path: 'rewards', Component: RewardsPage },
       { path: 'profile', Component: ProfilePage },
+      { path: 'admin', Component: AdminDashboard },
       { path: '*', Component: StoreSelection },
     ],
   },

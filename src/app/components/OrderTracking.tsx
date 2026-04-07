@@ -1,10 +1,14 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
-import { CheckCircle2, Clock, ChefHat, Coffee, PartyPopper, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, ChefHat, Coffee, PartyPopper, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { SIZE_LABELS } from '../config/menuRules';
+import { onOrderSnapshot } from '../services/firestore';
+import type { OrderDoc, OrderStatusEnum } from '../types/firestore';
+import type { Order, OrderStatus } from '../types/order';
+import type { CartItem, StoreId } from '../types/menu';
 
 const steps = [
   { label: 'Arrival', icon: Clock },
@@ -12,6 +16,14 @@ const steps = [
   { label: 'Ready', icon: Coffee },
   { label: 'Completed', icon: PartyPopper },
 ];
+
+const firestoreStatusToLocal: Record<OrderStatusEnum, OrderStatus> = {
+  'Pending': 'waiting_for_arrival',
+  'In Progress': 'preparing',
+  'Ready': 'ready',
+  'Completed': 'completed',
+  'Cancelled': 'payment_failed',
+};
 
 const statusIndex: Record<string, number> = {
   waiting_for_arrival: 0,
@@ -21,11 +33,78 @@ const statusIndex: Record<string, number> = {
   payment_failed: 0,
 };
 
+function mapOrderDocToOrder(d: OrderDoc): Order {
+  const status = firestoreStatusToLocal[d.status];
+  const statusMessages: Record<OrderStatus, string> = {
+    waiting_for_arrival: 'Prepare once you arrived in the store',
+    preparing: "We're now processing your order",
+    ready: 'Your order is ready for pickup!',
+    completed: 'Order completed. Thank you!',
+    payment_failed: 'Online payment failed. Please try again or switch to Pay at Store.',
+  };
+  return {
+    id: d.orderId,
+    items: d.orderDetails.map(item => ({
+      cartItemId: item.orderItemId,
+      productId: item.productId,
+      storeId: 'lehmuhn' as StoreId,
+      name: item.customizations.find(c => c.optionType === 'productName')?.optionValue ?? item.productId,
+      description: '',
+      image: item.customizations.find(c => c.optionType === 'image')?.optionValue ?? '',
+      basePrice: Number(item.customizations.find(c => c.optionType === 'basePrice')?.extraCost ?? 0),
+      quantity: item.quantity,
+      isPremium: false,
+      selectedSizeOz: item.customizations.find(c => c.optionType === 'size')
+        ? Number(item.customizations.find(c => c.optionType === 'size')!.optionValue) as CartItem['selectedSizeOz']
+        : undefined,
+      addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
+        id: c.optionId,
+        name: c.name,
+        extraCost: c.extraCost,
+      })),
+      toppingsRemoved: item.customizations.some(c => c.optionType === 'toppingsRemoved' && c.optionValue === 'true'),
+    })),
+    total: d.total,
+    status,
+    time: d.timestamp instanceof Date
+      ? d.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
+      : 'Now',
+    customerName: d.customerName,
+    orderType: d.orderType,
+    paymentMethod: d.paymentMethod as Order['paymentMethod'],
+    paymentStatus: d.paymentStatus as Order['paymentStatus'],
+    statusMessage: statusMessages[status],
+  };
+}
+
 export function OrderTracking() {
   const { orderId } = useParams();
   const navigate = useNavigate();
   const { orders } = useAppContext();
-  const order = orders.find(o => o.id === orderId);
+  const [realtimeOrder, setRealtimeOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!orderId) return;
+    const unsub = onOrderSnapshot(orderId, (doc) => {
+      if (doc) {
+        setRealtimeOrder(mapOrderDocToOrder(doc));
+      }
+      setLoading(false);
+    });
+    return unsub;
+  }, [orderId]);
+
+  // Fall back to context orders if realtime hasn't loaded yet
+  const order = realtimeOrder ?? orders.find(o => o.id === orderId);
+
+  if (loading) {
+    return (
+      <div className="px-4 pt-12 flex items-center justify-center">
+        <Loader2 size={32} color="#00704A" className="animate-spin" />
+      </div>
+    );
+  }
 
   if (!order) {
     return (
