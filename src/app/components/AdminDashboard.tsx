@@ -118,7 +118,7 @@ export function AdminDashboard() {
     try {
       const productId = editingProduct
         ? editingProduct.productId
-        : `prod-${Date.now()}`;
+        : `prd-${Date.now()}`;
 
       const productDoc: ProductDoc = {
         productId,
@@ -383,7 +383,7 @@ export function AdminDashboard() {
                   <div className="bg-[#F5F5F5] rounded-[10px] p-2.5">
                     {order.orderDetails.map(item => (
                       <div key={item.orderItemId} className="flex justify-between text-[12px] py-0.5">
-                        <span className="text-[#362415]">{item.quantity}x {item.productId}</span>
+                        <span className="text-[#362415]">{item.quantity}x {products.find(p => p.productId === item.productId)?.productName ?? item.productId}</span>
                       </div>
                     ))}
                     <p className="text-[11px] text-[#757575] mt-1">{order.orderType} • {order.paymentMethod}</p>

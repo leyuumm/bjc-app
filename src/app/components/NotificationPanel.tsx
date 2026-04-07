@@ -108,9 +108,11 @@ function NotificationPanel({ onClose }: { onClose: () => void }) {
                           {notif.message}
                         </p>
                         <p className="text-[11px] text-[#BDBDBD] mt-1">
-                          {notif.timestamp instanceof Date
-                            ? notif.timestamp.toLocaleString()
-                            : 'Just now'}
+                          {notif.timestamp && typeof (notif.timestamp as unknown as { toDate?: () => Date }).toDate === 'function'
+                            ? (notif.timestamp as unknown as { toDate: () => Date }).toDate().toLocaleString()
+                            : notif.timestamp instanceof Date
+                              ? notif.timestamp.toLocaleString()
+                              : 'Just now'}
                         </p>
                       </div>
                     </div>

@@ -45,10 +45,13 @@ const filterTabs = ['All', 'Pending', 'In Progress', 'Ready', 'Completed'];
 
 export function CashierDashboard() {
   const navigate = useNavigate();
-  const { firestoreOrders, userProfile, resetState, setIsLoggedIn } = useAppContext();
+  const { firestoreOrders, firestoreProducts, userProfile, resetState, setIsLoggedIn } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('All');
 
   const orders = firestoreOrders;
+
+  // Build a lookup map for product names
+  const productNameMap = new Map(firestoreProducts.map(p => [p.productId, p.productName]));
 
   const filtered = activeFilter === 'All'
     ? orders
@@ -185,7 +188,7 @@ export function CashierDashboard() {
                 {order.orderDetails.map(item => (
                   <div key={item.orderItemId} className="flex justify-between text-[13px] py-0.5">
                     <span className="text-[#362415]">
-                      {item.quantity}x {item.productId}
+                      {item.quantity}x {productNameMap.get(item.productId) ?? item.productId}
                     </span>
                   </div>
                 ))}
