@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Citrus, Coffee, MapPin } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { IMAGES } from './data';
+import { getStoreBranches } from '../services/firestore';
 
 export function StoreSelection() {
   const navigate = useNavigate();
   const { setSelectedBrand } = useAppContext();
+  const [lehmuhnCount, setLehmuhnCount] = useState<number | null>(null);
+  const [kohfeeCount, setKohfeeCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    getStoreBranches('lehmuhn').then(docs => setLehmuhnCount(docs.length));
+    getStoreBranches('kohfee').then(docs => setKohfeeCount(docs.length));
+  }, []);
 
   const handleSelect = (brand: 'lehmuhn' | 'kohfee') => {
     setSelectedBrand(brand);
@@ -44,7 +52,7 @@ export function StoreSelection() {
           </div>
           <div className="flex items-center gap-1 mt-3 text-[12px] text-[#00704A]">
             <MapPin size={14} />
-            <span>3 branches available</span>
+            <span>{lehmuhnCount === null ? '...' : `${lehmuhnCount} branch${lehmuhnCount !== 1 ? 'es' : ''} available`}</span>
           </div>
         </div>
       </motion.button>
@@ -74,7 +82,7 @@ export function StoreSelection() {
           </div>
           <div className="flex items-center gap-1 mt-3 text-[12px] text-[#362415]">
             <MapPin size={14} />
-            <span>3 branches available</span>
+            <span>{kohfeeCount === null ? '...' : `${kohfeeCount} branch${kohfeeCount !== 1 ? 'es' : ''} available`}</span>
           </div>
         </div>
       </motion.button>

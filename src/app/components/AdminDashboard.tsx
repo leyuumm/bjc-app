@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search } from 'lucide-react';
-import { onProductsSnapshot, seedDocument, deleteProduct } from '../services/firestore';
-import type { ProductDoc } from '../types/firestore';
+import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, LogOut } from 'lucide-react';
+import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories } from '../services/firestore';
+import type { ProductDoc, ProductCategoryDoc } from '../types/firestore';
 import type { StoreId } from '../types/menu';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router';
+import { useAppContext } from './AppContext';
+import { logout } from '../services/auth';
 
 const emptyForm: ProductDoc = {
   productId: '',
@@ -17,6 +21,8 @@ const emptyForm: ProductDoc = {
 };
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
+  const { resetState, setIsLoggedIn } = useAppContext();
   const [activeStore, setActiveStore] = useState<StoreId>('lehmuhn');
   const [products, setProducts] = useState<ProductDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +32,9 @@ export function AdminDashboard() {
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [categories, setCategories] = useState<ProductCategoryDoc[]>([]);
+  const [metaDescription, setMetaDescription] = useState('');
+  const [metaIsPremium, setMetaIsPremium] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -36,6 +45,10 @@ export function AdminDashboard() {
     return unsub;
   }, [activeStore]);
 
+  useEffect(() => {
+    getCategories(activeStore).then(setCategories);
+  }, [activeStore]);
+
   const filtered = products.filter(p =>
     p.productName.toLowerCase().includes(search.toLowerCase()),
   );
@@ -43,12 +56,17 @@ export function AdminDashboard() {
   const openAddForm = () => {
     setEditingProduct(null);
     setForm({ ...emptyForm, storeId: activeStore });
+    setMetaDescription('');
+    setMetaIsPremium(false);
     setShowForm(true);
   };
 
   const openEditForm = (product: ProductDoc) => {
     setEditingProduct(product);
     setForm({ ...product });
+    const meta = (product.meta ?? {}) as Record<string, unknown>;
+    setMetaDescription((meta.description as string) ?? '');
+    setMetaIsPremium((meta.isPremium as boolean) ?? false);
     setShowForm(true);
   };
 
@@ -56,35 +74,72 @@ export function AdminDashboard() {
     if (!form.productName.trim() || !form.imageUrl.trim()) return;
     setSaving(true);
 
-    const productId = editingProduct
-      ? editingProduct.productId
-      : form.productName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    try {
+      const meta = {
+        ...(form.meta ?? {}),
+        description: metaDescription,
+        isPremium: metaIsPremium,
+      };
 
-    const data: Record<string, unknown> = {
-      productId,
-      storeId: form.storeId,
-      productName: form.productName.trim(),
-      price: form.price,
-      categoryId: form.categoryId,
-      imageUrl: form.imageUrl.trim(),
-      isAvailable: form.isAvailable,
-      branchId: form.branchId ?? '',
-      meta: form.meta ?? {},
-    };
-
-    await seedDocument('products', productId, data);
-    setSaving(false);
-    setShowForm(false);
+      if (editingProduct) {
+        await updateProduct(editingProduct.productId, {
+          storeId: form.storeId,
+          productName: form.productName.trim(),
+          price: form.price,
+          categoryId: form.categoryId,
+          imageUrl: form.imageUrl.trim(),
+          isAvailable: form.isAvailable,
+          meta,
+        });
+        toast.success('Product updated successfully');
+      } else {
+        await addProduct({
+          storeId: form.storeId,
+          productName: form.productName.trim(),
+          price: form.price,
+          categoryId: form.categoryId,
+          imageUrl: form.imageUrl.trim(),
+          isAvailable: form.isAvailable,
+          meta,
+        });
+        toast.success('Product added successfully');
+      }
+      setShowForm(false);
+    } catch (err) {
+      toast.error('Failed to save product');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (productId: string) => {
-    await deleteProduct(productId);
+    try {
+      await deleteProduct(productId);
+      toast.success('Product deleted');
+    } catch (err) {
+      toast.error('Failed to delete product');
+    }
     setConfirmDelete(null);
   };
 
   return (
     <div className="px-4 pt-10 pb-6">
-      <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-1">
+        <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Admin Dashboard</h1>
+        <button
+          onClick={async () => {
+            await logout();
+            resetState();
+            setIsLoggedIn(false);
+            navigate('/splash');
+          }}
+          className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-[#D32F2F] text-[#D32F2F] text-[13px] cursor-pointer"
+          style={{ fontWeight: 600 }}
+        >
+          <LogOut size={16} />
+          Sign Out
+        </button>
+      </div>
       <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Manage products</p>
 
       {/* Store Tabs */}
@@ -301,14 +356,27 @@ export function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[12px] text-[#757575] mb-1 block">Category ID</label>
-                    <input
-                      type="text"
-                      value={form.categoryId ?? ''}
-                      onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
-                      placeholder="e.g. cold-drinks"
-                      className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
-                    />
+                    <label className="text-[12px] text-[#757575] mb-1 block">Category</label>
+                    {categories.length > 0 ? (
+                      <select
+                        value={form.categoryId ?? ''}
+                        onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                        className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                      >
+                        <option value="">Select category</option>
+                        {categories.map(cat => (
+                          <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={form.categoryId ?? ''}
+                        onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
+                        placeholder="e.g. cold-drinks"
+                        className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                      />
+                    )}
                   </div>
 
                   <div>
@@ -320,17 +388,44 @@ export function AdminDashboard() {
                       placeholder="https://..."
                       className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
                     />
+                    {form.imageUrl.trim() && (
+                      <div className="mt-2 w-20 h-20 rounded-[10px] overflow-hidden border border-[rgba(0,0,0,0.08)]">
+                        <img
+                          src={form.imageUrl}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="text-[12px] text-[#757575] mb-1 block">Branch ID (optional)</label>
-                    <input
-                      type="text"
-                      value={form.branchId ?? ''}
-                      onChange={e => setForm(f => ({ ...f, branchId: e.target.value }))}
-                      placeholder="e.g. branch-01"
-                      className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                    <label className="text-[12px] text-[#757575] mb-1 block">Description</label>
+                    <textarea
+                      value={metaDescription}
+                      onChange={e => setMetaDescription(e.target.value)}
+                      placeholder="Product description..."
+                      rows={3}
+                      className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none resize-none"
                     />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-[14px] text-[#362415]" style={{ fontWeight: 500 }}>Premium</label>
+                    <button
+                      onClick={() => setMetaIsPremium(v => !v)}
+                      className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
+                        metaIsPremium ? 'bg-[#362415]' : 'bg-[#E0E0E0]'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
+                          metaIsPremium ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                      />
+                    </button>
                   </div>
 
                   <div className="flex items-center justify-between">

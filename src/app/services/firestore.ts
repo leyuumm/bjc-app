@@ -292,3 +292,16 @@ export function onProductsSnapshot(
     callback(snap.docs.map(d => d.data() as ProductDoc));
   });
 }
+
+// ─── Product CRUD ──────────────────────────────────────────────────
+
+export async function addProduct(data: Omit<ProductDoc, 'productId'>): Promise<ProductDoc> {
+  const productId = `prod-${Date.now()}`;
+  const product: ProductDoc = { productId, ...data };
+  await setDoc(doc(db, PRODUCTS, productId), product);
+  return product;
+}
+
+export async function updateProduct(productId: string, data: Partial<ProductDoc>): Promise<void> {
+  await updateDoc(doc(db, PRODUCTS, productId), data);
+}

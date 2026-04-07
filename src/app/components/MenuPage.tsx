@@ -9,48 +9,54 @@ import type {
   CartItem,
   KohFeeMenuGroup,
   KohFeeSubGroup,
+  KohfeeProduct,
   LehMuhnDrinkType,
+  LehmuhnProduct,
   Product,
   SizeOz,
 } from '../types/menu';
 import type { ProductDoc } from '../types/firestore';
 import { getPriceForSize } from './data';
-import { getProductsByStore } from '../services/firestore';
+import { onProductsSnapshot } from '../services/firestore';
 import { cn } from './ui/utils';
 
 function mapProductDocToProduct(doc: ProductDoc): Product {
   const meta = (doc.meta ?? {}) as Record<string, unknown>;
-  const base = {
-    id: doc.productId,
-    name: doc.productName,
-    basePrice: doc.price,
-    image: doc.imageUrl,
-    description: (meta.description as string) ?? '',
-    isPremium: (meta.isPremium as boolean) ?? false,
-    priceBySizeOz: meta.priceBySizeOz as Partial<Record<SizeOz, number>> | undefined,
-    defaultToppingsLabel: meta.defaultToppingsLabel as string | undefined,
-    defaultToppingsCost: meta.defaultToppingsCost as number | undefined,
-  };
 
   if (doc.storeId === 'lehmuhn') {
     return {
-      ...base,
+      id: doc.productId,
       storeId: 'lehmuhn',
+      name: doc.productName,
+      description: (meta.description as string) ?? '',
+      basePrice: doc.price,
+      image: doc.imageUrl,
+      isPremium: (meta.isPremium as boolean) ?? false,
+      priceBySizeOz: (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined,
+      defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
+      defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
       drinkType: (meta.drinkType as LehMuhnDrinkType) ?? 'COLD',
-      allowedDrinkTypes: meta.allowedDrinkTypes as LehMuhnDrinkType[] | undefined,
-      hotOptions: meta.hotOptions as string[] | undefined,
-      requiresFruitSelection: meta.requiresFruitSelection as Product extends { requiresFruitSelection?: infer R } ? R : never,
-    } as Product;
+      allowedDrinkTypes: (meta.allowedDrinkTypes as LehMuhnDrinkType[]) ?? undefined,
+      hotOptions: (meta.hotOptions as string[]) ?? undefined,
+      requiresFruitSelection: (meta.requiresFruitSelection as { min: number; max: number; options: string[] }) ?? undefined,
+    } satisfies LehmuhnProduct;
   }
-
   return {
-    ...base,
+    id: doc.productId,
     storeId: 'kohfee',
-    menuGroup: (meta.menuGroup as KohFeeMenuGroup) ?? 'COLD',
-    subGroup: meta.subGroup as KohFeeSubGroup | undefined,
+    name: doc.productName,
+    description: (meta.description as string) ?? '',
+    basePrice: doc.price,
+    image: doc.imageUrl,
+    isPremium: (meta.isPremium as boolean) ?? false,
+    priceBySizeOz: (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined,
+    defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
+    defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
+    menuGroup: (meta.menuGroup as KohFeeMenuGroup) ?? 'HOT',
+    subGroup: (meta.subGroup as KohFeeSubGroup) ?? undefined,
     isFood: (meta.isFood as boolean) ?? false,
-    allowedMenuGroups: meta.allowedMenuGroups as KohFeeMenuGroup[] | undefined,
-  } as Product;
+    allowedMenuGroups: (meta.allowedMenuGroups as KohFeeMenuGroup[]) ?? undefined,
+  } satisfies KohfeeProduct;
 }
 
 const LEHMUHN_TABS: LehMuhnDrinkType[] = ['HOT', 'COLD', 'BLENDED', 'SPARKLING'];
@@ -69,15 +75,12 @@ export function MenuPage() {
 
   useEffect(() => {
     if (!selectedBrand) return;
-    let cancelled = false;
     setLoading(true);
-    getProductsByStore(selectedBrand).then((docs) => {
-      if (!cancelled) {
-        setProducts(docs.map(mapProductDocToProduct));
-        setLoading(false);
-      }
+    const unsub = onProductsSnapshot(selectedBrand, (docs) => {
+      setProducts(docs.map(mapProductDocToProduct));
+      setLoading(false);
     });
-    return () => { cancelled = true; };
+    return unsub;
   }, [selectedBrand]);
 
   const brandProducts = products.filter(p => p.storeId === selectedBrand);
@@ -194,6 +197,10 @@ export function MenuPage() {
             </div>
           ))}
         </div>
+      ) : filteredProducts.length === 0 ? (
+      <div className="px-4 pt-16 pb-4 text-center">
+        <p className="text-[15px] text-[#757575]">No products available</p>
+      </div>
       ) : (
       <div className="px-4 pt-4 pb-4 grid grid-cols-2 gap-3">
         {filteredProducts.map((product, i) => (

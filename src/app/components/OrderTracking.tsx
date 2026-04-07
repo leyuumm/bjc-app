@@ -6,9 +6,10 @@ import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { SIZE_LABELS } from '../config/menuRules';
 import { onOrderSnapshot } from '../services/firestore';
-import type { OrderDoc, OrderStatusEnum } from '../types/firestore';
-import type { Order, OrderStatus } from '../types/order';
-import type { CartItem, StoreId } from '../types/menu';
+import type { OrderDoc } from '../types/firestore';
+import type { Order } from '../types/order';
+import type { StoreId } from '../types/menu';
+import { mapOrderDocToOrder } from '../utils/mappers';
 
 const steps = [
   { label: 'Arrival', icon: Clock },
@@ -17,14 +18,6 @@ const steps = [
   { label: 'Completed', icon: PartyPopper },
 ];
 
-const firestoreStatusToLocal: Record<OrderStatusEnum, OrderStatus> = {
-  'Pending': 'waiting_for_arrival',
-  'In Progress': 'preparing',
-  'Ready': 'ready',
-  'Completed': 'completed',
-  'Cancelled': 'payment_failed',
-};
-
 const statusIndex: Record<string, number> = {
   waiting_for_arrival: 0,
   preparing: 1,
@@ -32,50 +25,6 @@ const statusIndex: Record<string, number> = {
   completed: 3,
   payment_failed: 0,
 };
-
-function mapOrderDocToOrder(d: OrderDoc): Order {
-  const status = firestoreStatusToLocal[d.status];
-  const statusMessages: Record<OrderStatus, string> = {
-    waiting_for_arrival: 'Prepare once you arrived in the store',
-    preparing: "We're now processing your order",
-    ready: 'Your order is ready for pickup!',
-    completed: 'Order completed. Thank you!',
-    payment_failed: 'Online payment failed. Please try again or switch to Pay at Store.',
-  };
-  return {
-    id: d.orderId,
-    items: d.orderDetails.map(item => ({
-      cartItemId: item.orderItemId,
-      productId: item.productId,
-      storeId: 'lehmuhn' as StoreId,
-      name: item.customizations.find(c => c.optionType === 'productName')?.optionValue ?? item.productId,
-      description: '',
-      image: item.customizations.find(c => c.optionType === 'image')?.optionValue ?? '',
-      basePrice: Number(item.customizations.find(c => c.optionType === 'basePrice')?.extraCost ?? 0),
-      quantity: item.quantity,
-      isPremium: false,
-      selectedSizeOz: item.customizations.find(c => c.optionType === 'size')
-        ? Number(item.customizations.find(c => c.optionType === 'size')!.optionValue) as CartItem['selectedSizeOz']
-        : undefined,
-      addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
-        id: c.optionId,
-        name: c.name,
-        extraCost: c.extraCost,
-      })),
-      toppingsRemoved: item.customizations.some(c => c.optionType === 'toppingsRemoved' && c.optionValue === 'true'),
-    })),
-    total: d.total,
-    status,
-    time: d.timestamp instanceof Date
-      ? d.timestamp.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
-      : 'Now',
-    customerName: d.customerName,
-    orderType: d.orderType,
-    paymentMethod: d.paymentMethod as Order['paymentMethod'],
-    paymentStatus: d.paymentStatus as Order['paymentStatus'],
-    statusMessage: statusMessages[status],
-  };
-}
 
 export function OrderTracking() {
   const { orderId } = useParams();

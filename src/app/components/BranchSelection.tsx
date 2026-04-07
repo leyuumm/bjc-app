@@ -3,9 +3,22 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { Search, ArrowLeft, Clock, MapPin, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { useAppContext } from './AppContext';
+import { branches as staticBranches } from './data';
 import { getStoreBranches } from '../services/firestore';
 import type { BranchDoc } from '../types/firestore';
-import type { Branch } from '../types/menu';
+import type { Branch, StoreId } from '../types/menu';
+
+function mapBranchDocToBranch(doc: BranchDoc): Branch {
+  return {
+    id: doc.branchId,
+    name: doc.branchName,
+    address: doc.address,
+    hours: doc.operatingHours,
+    available: doc.isActive,
+    brand: doc.storeId as StoreId,
+    image: staticBranches.find(b => b.id === doc.branchId)?.image,
+  };
+}
 
 export function BranchSelection() {
   const navigate = useNavigate();
@@ -20,14 +33,7 @@ export function BranchSelection() {
     setLoading(true);
     getStoreBranches(selectedBrand).then((docs: BranchDoc[]) => {
       if (!cancelled) {
-        setBranches(docs.map(d => ({
-          id: d.branchId,
-          name: d.branchName,
-          address: d.address,
-          hours: d.operatingHours,
-          available: d.isActive,
-          brand: d.storeId as Branch['brand'],
-        })));
+        setBranches(docs.map(mapBranchDocToBranch));
         setLoading(false);
       }
     });
@@ -80,6 +86,10 @@ export function BranchSelection() {
             </div>
           ))}
         </div>
+      ) : filtered.length === 0 ? (
+      <div className="text-center py-12">
+        <p className="text-[15px] text-[#757575]">No branches found</p>
+      </div>
       ) : (
       <div className="space-y-3">
         {filtered.map((branch, i) => (

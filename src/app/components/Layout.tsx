@@ -20,6 +20,10 @@ export function Layout() {
       navigate('/cashier', { replace: true });
     } else if (role === 'ADMIN' && !location.pathname.startsWith('/admin')) {
       navigate('/admin', { replace: true });
+    } else if (role === 'CUSTOMER') {
+      if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/cashier')) {
+        navigate('/home', { replace: true });
+      }
     }
   }, [role, location.pathname, userProfile, navigate]);
 

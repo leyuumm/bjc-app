@@ -5,14 +5,15 @@ import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check, AlertCircle } from 
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { createPaymongoCheckout } from '../lib/paymongo';
-import { createOrder, sendNotification } from '../services/firestore';
+import { createOrder, sendNotification, getLoyaltyPoints, updateLoyaltyPoints } from '../services/firestore';
 import type { OrderItemDoc, CustomizationDoc } from '../types/firestore';
 import type { PaymentMethod } from '../types/order';
 import type { CartItem } from '../types/menu';
+import { toast } from 'sonner';
 
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const { cart, clearCart, addOrder, selectedBrand, selectedBranch, firebaseUser, userProfile } = useAppContext();
+  const { cart, clearCart, addOrder, selectedBrand, selectedBranch, firebaseUser, userProfile, setLoyaltyPoints } = useAppContext();
   const [orderType, setOrderType] = useState<'advance' | 'onsite'>('advance');
   const [pickupTime, setPickupTime] = useState('10:30 AM');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('PAY_AT_STORE');
@@ -114,6 +115,22 @@ export function CheckoutPage() {
     // Send notification
     if (userId && paymentStatus !== 'FAILED') {
       sendNotification(userId, `Your order #${orderId} has been placed!`);
+    }
+
+    // Award loyalty points
+    if (firebaseUser && paymentStatus !== 'FAILED') {
+      const earned = Math.floor(subtotal / 10);
+      if (earned > 0) {
+        try {
+          const currentPoints = await getLoyaltyPoints(firebaseUser.uid);
+          const newTotal = currentPoints + earned;
+          await updateLoyaltyPoints(firebaseUser.uid, newTotal);
+          setLoyaltyPoints(newTotal);
+          toast.success(`You earned ${earned} loyalty points! 🌟`);
+        } catch {
+          // Non-blocking — don't fail the order for loyalty points
+        }
+      }
     }
 
     addOrder({
