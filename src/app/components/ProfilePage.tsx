@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import {
   User, Heart, CreditCard, ClipboardList, ChevronRight,
-  Settings, HelpCircle, LogOut, Bell, Shield, Star, Edit3,
+  Settings, HelpCircle, LogOut, Bell, Shield, Star, Edit3, Loader2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppContext } from './AppContext';
 import { IMAGES } from './data';
 import { logout } from '../services/auth';
+import { seedFirestore } from '../services/seed';
 
 const favoriteOrders = [
   { id: '1', name: 'Caramel Frappé', size: 'Large', image: IMAGES.frappe },
@@ -26,6 +28,7 @@ export function ProfilePage() {
   const navigate = useNavigate();
   const { loyaltyPoints, setIsLoggedIn, userProfile, firebaseUser, resetState } = useAppContext();
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [seeding, setSeeding] = useState(false);
 
   const displayName = userProfile?.name || firebaseUser?.displayName || 'Guest User';
   const displayEmail = userProfile?.email || firebaseUser?.email || '';
@@ -186,6 +189,31 @@ export function ProfilePage() {
           Sign Out
         </button>
       </div>
+
+      {/* Dev-only Seed Button */}
+      {import.meta.env.DEV && (
+        <div className="px-4 pt-3">
+          <button
+            onClick={async () => {
+              setSeeding(true);
+              try {
+                await seedFirestore();
+                toast.success('Firestore seeded!');
+              } catch {
+                toast.error('Seed failed!');
+              } finally {
+                setSeeding(false);
+              }
+            }}
+            disabled={seeding}
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-[12px] text-white text-[14px] cursor-pointer disabled:opacity-60"
+            style={{ fontWeight: 600, background: '#362415' }}
+          >
+            {seeding ? <Loader2 size={18} className="animate-spin" /> : '🌱'}
+            {seeding ? 'Seeding…' : 'Seed Firestore (Dev Only)'}
+          </button>
+        </div>
+      )}
 
       <p className="text-center text-[11px] text-[#757575] mt-6">BJC App v1.0.0</p>
     </div>
