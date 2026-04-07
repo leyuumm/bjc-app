@@ -9,6 +9,7 @@ import {
   registerWithEmail,
   loginWithGoogle,
   updateUserProfile,
+  getUserProfile,
   validateEmail,
   validatePassword,
   validateName,
@@ -16,6 +17,7 @@ import {
   getAuthErrorMessage,
   logout,
 } from '../services/auth';
+import type { UserRole } from '../types/firestore';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -39,6 +41,14 @@ export function LoginPage() {
   // Google profile completion
   const [googleProfileMode, setGoogleProfileMode] = useState(false);
   const [googleUid, setGoogleUid] = useState('');
+
+  const getRouteForRole = (role?: UserRole): string => {
+    switch (role) {
+      case 'ADMIN': return '/admin';
+      case 'CASHIER': return '/cashier';
+      default: return '/home';
+    }
+  };
 
   const clearErrors = () => {
     setErrors({});
@@ -90,10 +100,11 @@ export function LoginPage() {
 
     setLoading(true);
     try {
-      await loginWithEmail(email, password);
+      const user = await loginWithEmail(email, password);
+      const profile = await getUserProfile(user.uid);
       setIsLoggedIn(true);
       toast.success('Login successful! Welcome back.');
-      navigate('/home');
+      navigate(getRouteForRole(profile?.role));
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
       setGeneralError(getAuthErrorMessage(code));
@@ -140,9 +151,10 @@ export function LoginPage() {
         setLoading(false);
         return;
       }
+      const profile = await getUserProfile(result.user.uid);
       setIsLoggedIn(true);
       toast.success('Login successful! Welcome back.');
-      navigate('/home');
+      navigate(getRouteForRole(profile?.role));
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? '';
       setGeneralError(getAuthErrorMessage(code));

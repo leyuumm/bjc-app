@@ -10,6 +10,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { OrderTracking } from './components/OrderTracking';
 import { OrdersPage } from './components/OrdersPage';
 import { CashierDashboard } from './components/CashierDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { RewardsPage } from './components/RewardsPage';
 import { ProfilePage } from './components/ProfilePage';
 
@@ -21,6 +22,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     Component: LoginPage,
+  },
+  {
+    path: '/admin',
+    Component: AdminDashboard,
   },
   {
     path: '/',

@@ -5,6 +5,7 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -231,6 +232,72 @@ export async function getLoyaltyPoints(userId: string): Promise<number> {
 
 export async function updateLoyaltyPoints(userId: string, points: number): Promise<void> {
   await updateDoc(doc(db, USERS, userId), { loyaltyPoints: points });
+}
+
+// ─── Admin Product CRUD ────────────────────────────────────────────
+
+export async function addProduct(product: ProductDoc): Promise<void> {
+  await setDoc(doc(db, PRODUCTS, product.productId), product);
+}
+
+export async function updateProduct(productId: string, data: Partial<ProductDoc>): Promise<void> {
+  await updateDoc(doc(db, PRODUCTS, productId), data);
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  await deleteDoc(doc(db, PRODUCTS, productId));
+}
+
+export async function getAllProducts(): Promise<ProductDoc[]> {
+  const snap = await getDocs(collection(db, PRODUCTS));
+  return snap.docs.map(d => ({ ...d.data(), productId: d.id } as ProductDoc));
+}
+
+// ─── Realtime Products ─────────────────────────────────────────────
+
+export function onProductsSnapshot(
+  storeId: string,
+  callback: (products: ProductDoc[]) => void,
+): Unsubscribe {
+  const q = query(collection(db, PRODUCTS), where('storeId', '==', storeId));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ ...d.data(), productId: d.id } as ProductDoc)));
+  });
+}
+
+export function onAllProductsSnapshot(
+  callback: (products: ProductDoc[]) => void,
+): Unsubscribe {
+  return onSnapshot(collection(db, PRODUCTS), snap => {
+    callback(snap.docs.map(d => ({ ...d.data(), productId: d.id } as ProductDoc)));
+  });
+}
+
+// ─── Realtime All Orders (Cashier/Admin) ───────────────────────────
+
+export function onAllOrdersSnapshot(
+  callback: (orders: OrderDoc[]) => void,
+): Unsubscribe {
+  const q = query(collection(db, ORDERS), orderBy('timestamp', 'desc'));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ ...d.data(), orderId: d.id } as OrderDoc)));
+  });
+}
+
+// ─── Realtime Notifications ────────────────────────────────────────
+
+export function onNotificationsSnapshot(
+  userId: string,
+  callback: (notifications: NotificationDoc[]) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, NOTIFICATIONS),
+    where('userId', '==', userId),
+    orderBy('timestamp', 'desc'),
+  );
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => d.data() as NotificationDoc));
+  });
 }
 
 // ─── Seed helpers ──────────────────────────────────────────────────

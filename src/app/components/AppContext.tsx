@@ -2,9 +2,16 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import type { User } from 'firebase/auth';
 import type { Order } from '../types/order';
 import type { CartItem, StoreId } from '../types/menu';
-import type { UserDoc } from '../types/firestore';
+import type { UserDoc, NotificationDoc, OrderDoc, ProductDoc } from '../types/firestore';
 import { sampleOrders } from './data';
 import { onAuthChange, getUserProfile } from '../services/auth';
+import {
+  onNotificationsSnapshot,
+  onAllOrdersSnapshot,
+  onOrdersSnapshot,
+  onAllProductsSnapshot,
+  markNotificationAsRead as markRead,
+} from '../services/firestore';
 
 interface AppState {
   selectedBrand: StoreId | null;
@@ -27,6 +34,16 @@ interface AppState {
   userProfile: UserDoc | null;
   authLoading: boolean;
   resetState: () => void;
+  // Realtime notifications
+  notifications: NotificationDoc[];
+  unreadNotificationCount: number;
+  markNotificationAsRead: (notificationId: string) => void;
+  // Realtime Firestore orders (for cashier/admin)
+  firestoreOrders: OrderDoc[];
+  // Realtime Firestore orders (for customer)
+  customerFirestoreOrders: OrderDoc[];
+  // Realtime Firestore products
+  firestoreProducts: ProductDoc[];
 }
 
 const AppContext = createContext<AppState>({} as AppState);
@@ -41,6 +58,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserDoc | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+
+  // Realtime state
+  const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+  const [firestoreOrders, setFirestoreOrders] = useState<OrderDoc[]>([]);
+  const [customerFirestoreOrders, setCustomerFirestoreOrders] = useState<OrderDoc[]>([]);
+  const [firestoreProducts, setFirestoreProducts] = useState<ProductDoc[]>([]);
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -57,11 +80,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsLoggedIn(false);
         setUserProfile(null);
         setLoyaltyPoints(0);
+        setNotifications([]);
+        setFirestoreOrders([]);
+        setCustomerFirestoreOrders([]);
       }
       setAuthLoading(false);
     });
     return unsub;
   }, []);
+
+  // Realtime notifications for current user
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = onNotificationsSnapshot(firebaseUser.uid, setNotifications);
+    return unsub;
+  }, [firebaseUser]);
+
+  // Realtime all orders for cashier/admin
+  useEffect(() => {
+    if (!userProfile || (userProfile.role !== 'CASHIER' && userProfile.role !== 'ADMIN')) return;
+    const unsub = onAllOrdersSnapshot(setFirestoreOrders);
+    return unsub;
+  }, [userProfile]);
+
+  // Realtime customer orders
+  useEffect(() => {
+    if (!firebaseUser || !userProfile || userProfile.role !== 'CUSTOMER') return;
+    const unsub = onOrdersSnapshot(firebaseUser.uid, setCustomerFirestoreOrders);
+    return unsub;
+  }, [firebaseUser, userProfile]);
+
+  // Realtime all products
+  useEffect(() => {
+    const unsub = onAllProductsSnapshot(setFirestoreProducts);
+    return unsub;
+  }, []);
+
+  const unreadNotificationCount = notifications.filter(n => !n.isRead).length;
+
+  const handleMarkNotificationAsRead = (notificationId: string) => {
+    markRead(notificationId).catch(console.error);
+  };
 
   const addToCart = (item: CartItem) => {
     setCart(prev => {
@@ -107,6 +166,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isLoggedIn, setIsLoggedIn,
       firebaseUser, userProfile, authLoading,
       resetState,
+      notifications, unreadNotificationCount,
+      markNotificationAsRead: handleMarkNotificationAsRead,
+      firestoreOrders,
+      customerFirestoreOrders,
+      firestoreProducts,
     }}>
       {children}
     </AppContext.Provider>
