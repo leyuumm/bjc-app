@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { motion } from 'motion/react';
-import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft, Clock, MapPin, CreditCard, Store, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { getCartItemLineTotal } from './data';
 import { createPaymongoCheckout } from '../lib/paymongo';
@@ -293,6 +293,30 @@ export function CheckoutPage() {
       >
         {submitting ? 'Placing Order...' : `Place Order — ₱${subtotal}`}
       </button>
+
+      {/* Full-screen overlay while processing */}
+      <AnimatePresence>
+        {submitting && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[80] flex flex-col items-center justify-center"
+            style={{ background: 'rgba(54,36,21,0.75)', backdropFilter: 'blur(4px)' }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-[24px] px-10 py-8 flex flex-col items-center gap-4"
+              style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.25)' }}
+            >
+              <Loader2 size={40} color="#00704A" className="animate-spin" />
+              <p className="text-[#362415] text-[16px]" style={{ fontWeight: 600 }}>Placing your order…</p>
+              <p className="text-[#757575] text-[13px]">Please don't close the app</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

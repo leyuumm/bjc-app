@@ -26,7 +26,7 @@ const orderHistory = [
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { loyaltyPoints, setIsLoggedIn, userProfile, firebaseUser, resetState } = useAppContext();
+  const { loyaltyPoints, setIsLoggedIn, userProfile, firebaseUser, resetState, authLoading } = useAppContext();
   const [activeSection, setActiveSection] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
 
@@ -44,24 +44,35 @@ export function ProfilePage() {
     <div className="pb-6">
       {/* Profile Header */}
       <div className="px-5 pt-12 pb-6" style={{ background: 'linear-gradient(135deg, #362415, #00704A)' }}>
-        <div className="flex items-center gap-4">
-          <div className="w-[72px] h-[72px] rounded-full bg-white/20 flex items-center justify-center relative">
-            <User size={36} color="white" />
-            <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#00704A] border-2 border-white flex items-center justify-center cursor-pointer">
-              <Edit3 size={12} color="white" />
-            </button>
-          </div>
-          <div>
-            <h1 className="text-white text-[22px]" style={{ fontWeight: 700 }}>{displayName}</h1>
-            <p className="text-white/60 text-[13px]">{displayEmail}</p>
-            <div className="flex items-center gap-1 mt-1">
-              <Star size={14} color="#FFD700" fill="#FFD700" />
-              <span className="text-white/80 text-[13px]" style={{ fontWeight: 500 }}>
-                {loyaltyPoints.toLocaleString()} points
-              </span>
+        {authLoading ? (
+          <div className="flex items-center gap-4">
+            <div className="w-[72px] h-[72px] rounded-full bg-white/20 animate-pulse" />
+            <div className="flex-1 space-y-2">
+              <div className="h-5 w-36 bg-white/20 rounded animate-pulse" />
+              <div className="h-4 w-44 bg-white/10 rounded animate-pulse" />
+              <div className="h-4 w-24 bg-white/10 rounded animate-pulse" />
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-4">
+            <div className="w-[72px] h-[72px] rounded-full bg-white/20 flex items-center justify-center relative">
+              <User size={36} color="white" />
+              <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#00704A] border-2 border-white flex items-center justify-center cursor-pointer">
+                <Edit3 size={12} color="white" />
+              </button>
+            </div>
+            <div>
+              <h1 className="text-white text-[22px]" style={{ fontWeight: 700 }}>{displayName}</h1>
+              <p className="text-white/60 text-[13px]">{displayEmail}</p>
+              <div className="flex items-center gap-1 mt-1">
+                <Star size={14} color="#FFD700" fill="#FFD700" />
+                <span className="text-white/80 text-[13px]" style={{ fontWeight: 500 }}>
+                  {loyaltyPoints.toLocaleString()} points
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Favorite Orders */}
