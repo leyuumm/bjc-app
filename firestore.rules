@@ -109,5 +109,15 @@ service cloud.firestore {
       allow update: if isAuthenticated() && isOwner(resource.data.userId);
       allow delete: if isAdmin();
     }
+
+    // ─── Announcements ──────────────────────────────────────────────
+    // All authenticated users can read. Only admins can write.
+
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import type { User } from 'firebase/auth';
 import type { Order, OrderStatus } from '../types/order';
 import type { CartItem, StoreId } from '../types/menu';
-import type { NotificationDoc, OrderDoc, UserDoc } from '../types/firestore';
+import type { NotificationDoc, AnnouncementDoc, OrderDoc, UserDoc } from '../types/firestore';
 import { onAuthChange, getUserProfile } from '../services/auth';
-import { onOrdersSnapshot, onUserNotificationsSnapshot } from '../services/firestore';
+import { onOrdersSnapshot, onUserNotificationsSnapshot, onAnnouncementsSnapshot } from '../services/firestore';
 import { mapOrderDocToOrder } from '../utils/mappers';
 
 interface AppState {
@@ -29,6 +29,7 @@ interface AppState {
   authLoading: boolean;
   notifications: NotificationDoc[];
   unreadNotificationsCount: number;
+  announcements: AnnouncementDoc[];
   resetState: () => void;
 }
 
@@ -45,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserDoc | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementDoc[]>([]);
 
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
@@ -65,6 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setLoyaltyPoints(0);
         setOrders([]);
         setNotifications([]);
+        setAnnouncements([]);
       }
       setAuthLoading(false);
     });
@@ -85,6 +88,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!firebaseUser) return;
     const unsub = onUserNotificationsSnapshot(firebaseUser.uid, (notifs) => {
       setNotifications(notifs);
+    });
+    return unsub;
+  }, [firebaseUser]);
+
+  // Subscribe to global announcements when user is logged in
+  useEffect(() => {
+    if (!firebaseUser) return;
+    const unsub = onAnnouncementsSnapshot((items) => {
+      setAnnouncements(items);
     });
     return unsub;
   }, [firebaseUser]);
@@ -116,6 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setCart([]);
     setOrders([]);
     setNotifications([]);
+    setAnnouncements([]);
     setLoyaltyPoints(0);
   };
 
@@ -134,6 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isLoggedIn, setIsLoggedIn,
       firebaseUser, userProfile, authLoading,
       notifications, unreadNotificationsCount,
+      announcements,
       resetState,
     }}>
       {children}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, LogOut } from 'lucide-react';
-import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories } from '../services/firestore';
+import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, LogOut, Megaphone } from 'lucide-react';
+import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories, createAnnouncement } from '../services/firestore';
 import type { ProductDoc, ProductCategoryDoc } from '../types/firestore';
 import type { StoreId } from '../types/menu';
 import { toast } from 'sonner';
@@ -35,6 +35,7 @@ export function AdminDashboard() {
   const [categories, setCategories] = useState<ProductCategoryDoc[]>([]);
   const [metaDescription, setMetaDescription] = useState('');
   const [metaIsPremium, setMetaIsPremium] = useState(false);
+  const [notifyUsers, setNotifyUsers] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -58,6 +59,7 @@ export function AdminDashboard() {
     setForm({ ...emptyForm, storeId: activeStore });
     setMetaDescription('');
     setMetaIsPremium(false);
+    setNotifyUsers(false);
     setShowForm(true);
   };
 
@@ -93,7 +95,7 @@ export function AdminDashboard() {
         });
         toast.success('Product updated successfully');
       } else {
-        await addProduct({
+        const newProduct = await addProduct({
           storeId: form.storeId,
           productName: form.productName.trim(),
           price: form.price,
@@ -102,6 +104,16 @@ export function AdminDashboard() {
           isAvailable: form.isAvailable,
           meta,
         });
+        if (notifyUsers) {
+          const storeName = form.storeId === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee';
+          await createAnnouncement({
+            storeId: form.storeId,
+            title: `New item at ${storeName}!`,
+            message: `${form.productName.trim()} is now available. Check it out!`,
+            imageUrl: form.imageUrl.trim() || undefined,
+            productId: newProduct.productId,
+          });
+        }
         toast.success('Product added successfully');
       }
       setShowForm(false);
@@ -444,6 +456,31 @@ export function AdminDashboard() {
                       />
                     </button>
                   </div>
+
+                  {!editingProduct && (
+                    <div className="flex items-center justify-between rounded-[14px] bg-[#FFF8E1] px-4 py-3 border border-[#FFE082]">
+                      <div className="flex items-center gap-2">
+                        <Megaphone size={16} color="#F59E0B" />
+                        <div>
+                          <p className="text-[13px] text-[#362415]" style={{ fontWeight: 600 }}>Announce to users</p>
+                          <p className="text-[11px] text-[#757575]">Send a "What's New" notification</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setNotifyUsers(v => !v)}
+                        className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
+                          notifyUsers ? 'bg-[#F59E0B]' : 'bg-[#E0E0E0]'
+                        }`}
+                      >
+                        <div
+                          className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
+                            notifyUsers ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                        />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Save Button */}

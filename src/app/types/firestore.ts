@@ -102,3 +102,13 @@ export interface NotificationDoc {
   timestamp: Date;
   isRead: boolean;
 }
+
+export interface AnnouncementDoc {
+  announcementId: string;
+  storeId: string;
+  title: string;
+  message: string;
+  imageUrl?: string;
+  productId?: string;
+  timestamp: Date;
+}

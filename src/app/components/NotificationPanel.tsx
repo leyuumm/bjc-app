@@ -1,9 +1,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Bell, BellOff, Check } from 'lucide-react';
+import { X, BellOff, Check, Megaphone } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { markNotificationAsRead } from '../services/firestore';
-import type { NotificationDoc } from '../types/firestore';
 
 function formatTimestamp(ts: Date | unknown): string {
   if (ts instanceof Date) {
@@ -29,7 +28,7 @@ function formatTimestamp(ts: Date | unknown): string {
 }
 
 export function NotificationPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { notifications } = useAppContext();
+  const { notifications, announcements } = useAppContext();
 
   const handleMarkRead = async (notificationId: string) => {
     await markNotificationAsRead(notificationId);
@@ -39,6 +38,8 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
     const unread = notifications.filter(n => !n.isRead);
     await Promise.all(unread.map(n => markNotificationAsRead(n.notificationId)));
   };
+
+  const isEmpty = notifications.length === 0 && announcements.length === 0;
 
   return (
     <AnimatePresence>
@@ -86,47 +87,105 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
 
             {/* Notification List */}
             <div className="flex-1 overflow-y-auto" style={{ overscrollBehaviorY: 'contain' }}>
-              {notifications.length === 0 ? (
+              {isEmpty ? (
                 <div className="flex flex-col items-center justify-center h-full text-center px-6">
                   <div className="w-16 h-16 rounded-full bg-[#F5F5F5] flex items-center justify-center mb-3">
                     <BellOff size={28} color="#757575" />
                   </div>
                   <p className="text-[#757575] text-[15px]" style={{ fontWeight: 500 }}>No notifications yet</p>
-                  <p className="text-[#757575] text-[12px] mt-1">Order updates will appear here</p>
+                  <p className="text-[#757575] text-[12px] mt-1">Order updates and new items will appear here</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[rgba(0,0,0,0.06)]">
-                  {notifications.map((notif, i) => (
-                    <motion.button
-                      key={notif.notificationId}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      onClick={() => !notif.isRead && handleMarkRead(notif.notificationId)}
-                      className={`w-full px-4 py-3.5 text-left cursor-pointer transition-colors ${
-                        notif.isRead ? 'bg-white' : 'bg-[#E8F5E9]/30'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={`mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 ${
-                          notif.isRead ? 'bg-transparent' : 'bg-[#00704A]'
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-[14px] text-[#362415] ${notif.isRead ? '' : ''}`}
-                            style={{ fontWeight: notif.isRead ? 400 : 500 }}>
-                            {notif.message}
-                          </p>
-                          <p className="text-[11px] text-[#757575] mt-1">
-                            {formatTimestamp(notif.timestamp)}
-                          </p>
-                        </div>
-                        {notif.isRead && (
-                          <Check size={14} color="#757575" className="shrink-0 mt-1" />
-                        )}
+                <>
+                  {/* What's New — Announcements */}
+                  {announcements.length > 0 && (
+                    <div>
+                      <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                        <Megaphone size={14} color="#F59E0B" />
+                        <p className="text-[12px] text-[#757575] uppercase tracking-wide" style={{ fontWeight: 600 }}>
+                          What's New
+                        </p>
                       </div>
-                    </motion.button>
-                  ))}
-                </div>
+                      <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+                        {announcements.map((ann, i) => (
+                          <motion.div
+                            key={ann.announcementId}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.03 }}
+                            className="px-4 py-3.5 bg-[#FFF8E1]/60"
+                          >
+                            <div className="flex items-start gap-3">
+                              {ann.imageUrl ? (
+                                <div className="w-10 h-10 rounded-[8px] overflow-hidden shrink-0 border border-[rgba(0,0,0,0.06)]">
+                                  <img src={ann.imageUrl} alt={ann.title} className="w-full h-full object-cover" />
+                                </div>
+                              ) : (
+                                <div className="w-10 h-10 rounded-[8px] bg-[#FFE082] flex items-center justify-center shrink-0">
+                                  <Megaphone size={18} color="#F59E0B" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[13px] text-[#362415]" style={{ fontWeight: 600 }}>
+                                  {ann.title}
+                                </p>
+                                <p className="text-[13px] text-[#757575] mt-0.5">
+                                  {ann.message}
+                                </p>
+                                <p className="text-[11px] text-[#BDBDBD] mt-1">
+                                  {formatTimestamp(ann.timestamp)}
+                                </p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Order Notifications */}
+                  {notifications.length > 0 && (
+                    <div>
+                      <div className="px-4 pt-4 pb-2">
+                        <p className="text-[12px] text-[#757575] uppercase tracking-wide" style={{ fontWeight: 600 }}>
+                          Order Updates
+                        </p>
+                      </div>
+                      <div className="divide-y divide-[rgba(0,0,0,0.06)]">
+                        {notifications.map((notif, i) => (
+                          <motion.button
+                            key={notif.notificationId}
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.03 }}
+                            onClick={() => !notif.isRead && handleMarkRead(notif.notificationId)}
+                            className={`w-full px-4 py-3.5 text-left cursor-pointer transition-colors ${
+                              notif.isRead ? 'bg-white' : 'bg-[#E8F5E9]/30'
+                            }`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 ${
+                                notif.isRead ? 'bg-transparent' : 'bg-[#00704A]'
+                              }`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[14px] text-[#362415]"
+                                  style={{ fontWeight: notif.isRead ? 400 : 500 }}>
+                                  {notif.message}
+                                </p>
+                                <p className="text-[11px] text-[#757575] mt-1">
+                                  {formatTimestamp(notif.timestamp)}
+                                </p>
+                              </div>
+                              {notif.isRead && (
+                                <Check size={14} color="#757575" className="shrink-0 mt-1" />
+                              )}
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </motion.div>
@@ -135,3 +194,4 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
     </AnimatePresence>
   );
 }
+

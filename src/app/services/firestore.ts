@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  limit,
   onSnapshot,
   serverTimestamp,
   type Unsubscribe,
@@ -23,6 +24,7 @@ import type {
   OrderItemDoc,
   PaymentDoc,
   NotificationDoc,
+  AnnouncementDoc,
   OrderStatusEnum,
 } from '../types/firestore';
 
@@ -33,6 +35,7 @@ const BRANCHES = 'branches';
 const PRODUCTS = 'products';
 const CATEGORIES = 'productCategories';
 const ORDERS = 'orders';
+const ANNOUNCEMENTS = 'announcements';
 const PAYMENTS = 'payments';
 const NOTIFICATIONS = 'notifications';
 const USERS = 'users';
@@ -304,4 +307,31 @@ export async function addProduct(data: Omit<ProductDoc, 'productId'>): Promise<P
 
 export async function updateProduct(productId: string, data: Partial<ProductDoc>): Promise<void> {
   await updateDoc(doc(db, PRODUCTS, productId), data);
+}
+
+// ─── Announcements ─────────────────────────────────────────────────
+
+export async function createAnnouncement(
+  data: Omit<AnnouncementDoc, 'announcementId' | 'timestamp'>,
+): Promise<AnnouncementDoc> {
+  const announcementId = `ANN-${Date.now()}`;
+  const announcement: AnnouncementDoc = { announcementId, ...data, timestamp: new Date() };
+  await setDoc(doc(db, ANNOUNCEMENTS, announcementId), {
+    ...announcement,
+    timestamp: serverTimestamp(),
+  });
+  return announcement;
+}
+
+export function onAnnouncementsSnapshot(
+  callback: (announcements: AnnouncementDoc[]) => void,
+): Unsubscribe {
+  const q = query(
+    collection(db, ANNOUNCEMENTS),
+    orderBy('timestamp', 'desc'),
+    limit(20),
+  );
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => d.data() as AnnouncementDoc));
+  });
 }
