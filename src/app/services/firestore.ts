@@ -53,6 +53,13 @@ export async function getStoreBranches(storeId: string): Promise<BranchDoc[]> {
   return snap.docs.map(d => d.data() as BranchDoc);
 }
 
+export async function getAllBranches(): Promise<BranchDoc[]> {
+  const snap = await getDocs(collection(db, BRANCHES));
+  return snap.docs
+    .map(d => d.data() as BranchDoc)
+    .sort((a, b) => a.branchName.localeCompare(b.branchName));
+}
+
 // ─── Branch ────────────────────────────────────────────────────────
 
 export async function getBranchDetails(branchId: string): Promise<BranchDoc | null> {

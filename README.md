@@ -36,6 +36,11 @@
 
   The project already has Capacitor Android set up. To build and run on a physical device:
 
+  0. Run Android environment/device diagnostics:
+     ```
+     npm run android:doctor
+     ```
+
   1. Build the web app and sync with Android:
      ```
      npm run build
@@ -54,4 +59,11 @@
      - Enable **USB Debugging**
 
   4. Connect your phone via USB, then click **Run** in Android Studio to install and launch the app.
+
+  5. Or run directly from CLI:
+     ```
+     npm run android:run
+     ```
+
+  If your device appears as **unauthorized**, unlock the phone and accept the **Allow USB debugging** prompt. You can force the prompt to reappear by using **Revoke USB debugging authorizations** in Developer Options and reconnecting USB.
   

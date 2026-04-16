@@ -1,12 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight, Loader2, MapPin } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { SIZE_LABELS } from '../config/menuRules';
-import { onBranchOrdersSnapshot, updateOrderStatus as updateFirestoreOrderStatus, sendNotification } from '../services/firestore';
+import {
+  onBranchOrdersSnapshot,
+  updateOrderStatus as updateFirestoreOrderStatus,
+  sendNotification,
+  getBranchDetails,
+} from '../services/firestore';
 import type { OrderDoc, OrderStatusEnum } from '../types/firestore';
 import type { Order, OrderStatus } from '../types/order';
-import type { StoreId } from '../types/menu';
 import { mapOrderDocToOrder } from '../utils/mappers';
 
 const localStatusToFirestore: Record<string, OrderStatusEnum> = {
@@ -44,13 +49,15 @@ const nextStatus: Record<string, Order['status'] | null> = {
 const filterTabs = ['All', 'Waiting', 'Preparing', 'Ready', 'Completed'];
 
 export function CashierDashboard() {
+  const navigate = useNavigate();
   const { userProfile } = useAppContext();
   const [activeFilter, setActiveFilter] = useState('All');
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderDocs, setOrderDocs] = useState<OrderDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [branchLabel, setBranchLabel] = useState('');
 
-  const branchId = userProfile?.assignedBranchId ?? '';
+  const branchId = userProfile?.activeBranchId ?? userProfile?.assignedBranchId ?? '';
 
   useEffect(() => {
     if (!branchId) {
@@ -63,6 +70,22 @@ export function CashierDashboard() {
       setLoading(false);
     });
     return unsub;
+  }, [branchId]);
+
+  useEffect(() => {
+    if (!branchId) {
+      setBranchLabel('');
+      return;
+    }
+    let cancelled = false;
+    getBranchDetails(branchId).then((branch) => {
+      if (!cancelled) {
+        setBranchLabel(branch?.branchName ?? branchId);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [branchId]);
 
   const handleUpdateStatus = async (orderId: string, newLocalStatus: OrderStatus) => {
@@ -91,12 +114,39 @@ export function CashierDashboard() {
 
   return (
     <div className="px-4 pt-10 pb-6">
-      <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Cashier Dashboard</h1>
-      <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Manage incoming orders</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Cashier Dashboard</h1>
+          <p className="text-[13px] text-[#757575] mt-0.5">Manage incoming orders</p>
+        </div>
+        <button
+          onClick={() => navigate('/cashier/select-branch')}
+          className="px-3 py-2 rounded-[10px] bg-[#F5F5F5] text-[#362415] text-[12px] cursor-pointer"
+          style={{ fontWeight: 600 }}
+        >
+          Switch Branch
+        </button>
+      </div>
+
+      {branchId && (
+        <div className="mt-3 mb-4 rounded-[12px] bg-[#E8F5E9] border border-[#81C784] px-3 py-2.5 flex items-center gap-2">
+          <MapPin size={16} color="#2E7D32" />
+          <p className="text-[13px] text-[#2E7D32]" style={{ fontWeight: 600 }}>
+            Active branch: {branchLabel || branchId}
+          </p>
+        </div>
+      )}
 
       {!branchId && (
         <div className="text-center py-12">
-          <p className="text-[#757575] text-[14px]">No branch assigned. Contact admin.</p>
+          <p className="text-[#757575] text-[14px]">Select your branch to start receiving orders.</p>
+          <button
+            onClick={() => navigate('/cashier/select-branch')}
+            className="mt-3 px-4 py-2 rounded-[10px] bg-[#00704A] text-white text-[13px] cursor-pointer"
+            style={{ fontWeight: 600 }}
+          >
+            Select Branch
+          </button>
         </div>
       )}
 

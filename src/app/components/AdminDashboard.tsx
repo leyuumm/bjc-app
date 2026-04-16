@@ -22,7 +22,7 @@ const emptyForm: ProductDoc = {
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { resetState, setIsLoggedIn } = useAppContext();
+  const { resetState, setIsLoggedIn, userProfile, authLoading } = useAppContext();
   const [activeStore, setActiveStore] = useState<StoreId>('lehmuhn');
   const [products, setProducts] = useState<ProductDoc[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,6 +36,13 @@ export function AdminDashboard() {
   const [metaDescription, setMetaDescription] = useState('');
   const [metaIsPremium, setMetaIsPremium] = useState(false);
   const [notifyUsers, setNotifyUsers] = useState(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (userProfile?.role !== 'ADMIN') {
+      navigate('/home', { replace: true });
+    }
+  }, [authLoading, userProfile, navigate]);
 
   useEffect(() => {
     setLoading(true);
@@ -73,6 +80,7 @@ export function AdminDashboard() {
   };
 
   const handleSave = async () => {
+    if (userProfile?.role !== 'ADMIN') return;
     if (!form.productName.trim() || !form.imageUrl.trim()) return;
     setSaving(true);
 
@@ -125,6 +133,7 @@ export function AdminDashboard() {
   };
 
   const handleDelete = async (productId: string) => {
+    if (userProfile?.role !== 'ADMIN') return;
     try {
       await deleteProduct(productId);
       toast.success('Product deleted');
@@ -133,6 +142,14 @@ export function AdminDashboard() {
     }
     setConfirmDelete(null);
   };
+
+  if (authLoading || userProfile?.role !== 'ADMIN') {
+    return (
+      <div className="px-4 pt-10 pb-6 flex items-center justify-center">
+        <Loader2 size={28} color="#00704A" className="animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-10 pb-6">

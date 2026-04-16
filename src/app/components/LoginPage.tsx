@@ -44,7 +44,7 @@ export function LoginPage() {
 
   const navigateByRole = (role: UserRole) => {
     switch (role) {
-      case 'CASHIER': navigate('/cashier'); break;
+      case 'CASHIER': navigate('/cashier/select-branch'); break;
       case 'ADMIN': navigate('/admin'); break;
       default: navigate('/home');
     }

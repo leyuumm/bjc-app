@@ -12,12 +12,22 @@ export function Layout() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   const role = userProfile?.role ?? 'CUSTOMER';
+  const cashierBranchPath = '/cashier/select-branch';
+  const cashierBranchId = userProfile?.activeBranchId ?? userProfile?.assignedBranchId;
 
   // Route guard by role
   useEffect(() => {
     if (!userProfile) return;
-    if (role === 'CASHIER' && !location.pathname.startsWith('/cashier')) {
-      navigate('/cashier', { replace: true });
+    if (role === 'CASHIER') {
+      if (!location.pathname.startsWith('/cashier')) {
+        navigate(cashierBranchPath, { replace: true });
+        return;
+      }
+
+      // Cashier must choose a branch first before opening the dashboard.
+      if (!cashierBranchId && location.pathname !== cashierBranchPath) {
+        navigate(cashierBranchPath, { replace: true });
+      }
     } else if (role === 'ADMIN' && !location.pathname.startsWith('/admin')) {
       navigate('/admin', { replace: true });
     } else if (role === 'CUSTOMER') {
@@ -25,7 +35,7 @@ export function Layout() {
         navigate('/home', { replace: true });
       }
     }
-  }, [role, location.pathname, userProfile, navigate]);
+  }, [role, location.pathname, userProfile, navigate, cashierBranchPath, cashierBranchId]);
 
   return (
     <div className="flex justify-center bg-[#F0F0F0] min-h-screen">

@@ -10,6 +10,7 @@ export interface UserDoc {
   loyaltyPoints: number;
   role: UserRole;
   assignedBranchId?: string;
+  activeBranchId?: string;
   createdAt: Date;
 }
 

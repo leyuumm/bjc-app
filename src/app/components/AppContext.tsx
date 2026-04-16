@@ -26,6 +26,7 @@ interface AppState {
   setIsLoggedIn: (v: boolean) => void;
   firebaseUser: User | null;
   userProfile: UserDoc | null;
+  updateUserProfileLocal: (data: Partial<UserDoc>) => void;
   authLoading: boolean;
   notifications: NotificationDoc[];
   unreadNotificationsCount: number;
@@ -137,6 +138,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status } : o));
   };
 
+  const updateUserProfileLocal = (data: Partial<UserDoc>) => {
+    setUserProfile(prev => (prev ? { ...prev, ...data } : prev));
+    if (typeof data.loyaltyPoints === 'number') {
+      setLoyaltyPoints(data.loyaltyPoints);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       selectedBrand, setSelectedBrand,
@@ -145,7 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       orders, addOrder, updateOrderStatus,
       loyaltyPoints, setLoyaltyPoints,
       isLoggedIn, setIsLoggedIn,
-      firebaseUser, userProfile, authLoading,
+      firebaseUser, userProfile, updateUserProfileLocal, authLoading,
       notifications, unreadNotificationsCount,
       announcements,
       resetState,

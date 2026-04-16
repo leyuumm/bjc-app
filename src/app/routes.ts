@@ -10,6 +10,7 @@ import { CheckoutPage } from './components/CheckoutPage';
 import { OrderTracking } from './components/OrderTracking';
 import { OrdersPage } from './components/OrdersPage';
 import { CashierDashboard } from './components/CashierDashboard';
+import { CashierBranchSelection } from './components/CashierBranchSelection';
 import { RewardsPage } from './components/RewardsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -36,6 +37,7 @@ export const router = createBrowserRouter([
       { path: 'order-tracking/:orderId', Component: OrderTracking },
       { path: 'orders', Component: OrdersPage },
       { path: 'cashier', Component: CashierDashboard },
+      { path: 'cashier/select-branch', Component: CashierBranchSelection },
       { path: 'rewards', Component: RewardsPage },
       { path: 'profile', Component: ProfilePage },
       { path: 'admin', Component: AdminDashboard },
