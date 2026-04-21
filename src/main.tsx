@@ -6,6 +6,9 @@
   if (import.meta.env.DEV) {
     import('./app/services/setupAdmin').then(m => {
       (window as unknown as Record<string, unknown>).setupAdmin = m.setupAdmin;
+      (window as unknown as Record<string, unknown>).setupCashierAccount = m.setupCashierAccount;
+      (window as unknown as Record<string, unknown>).setupOfficialCashierAccount = m.setupOfficialCashierAccount;
+      (window as unknown as Record<string, unknown>).setupOfficialCashierAccounts = m.setupOfficialCashierAccounts;
     });
   }
 
