@@ -56,21 +56,31 @@ export function CashierDashboard() {
   const [orderDocs, setOrderDocs] = useState<OrderDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [branchLabel, setBranchLabel] = useState('');
+  const [storeLabel, setStoreLabel] = useState('');
 
   const branchId = userProfile?.activeBranchId ?? userProfile?.assignedBranchId ?? '';
+  const storeId = userProfile?.activeStoreId ?? null;
 
   useEffect(() => {
     if (!branchId) {
       setLoading(false);
       return;
     }
-    const unsub = onBranchOrdersSnapshot(branchId, (docs) => {
+    const unsub = onBranchOrdersSnapshot(branchId, storeId, (docs) => {
       setOrderDocs(docs);
       setOrders(docs.map(mapOrderDocToOrder));
       setLoading(false);
     });
     return unsub;
-  }, [branchId]);
+  }, [branchId, storeId]);
+
+  useEffect(() => {
+    if (!storeId) {
+      setStoreLabel('');
+      return;
+    }
+    setStoreLabel(storeId === 'lehmuhn' ? 'Leh-muhn' : storeId === 'kohfee' ? 'Koh-fee' : storeId);
+  }, [storeId]);
 
   useEffect(() => {
     if (!branchId) {
@@ -132,7 +142,7 @@ export function CashierDashboard() {
         <div className="mt-3 mb-4 rounded-[12px] bg-[#E8F5E9] border border-[#81C784] px-3 py-2.5 flex items-center gap-2">
           <MapPin size={16} color="#2E7D32" />
           <p className="text-[13px] text-[#2E7D32]" style={{ fontWeight: 600 }}>
-            Active branch: {branchLabel || branchId}
+            Active: {branchLabel || branchId}{storeLabel ? ` · ${storeLabel}` : ''}
           </p>
         </div>
       )}

@@ -14,6 +14,7 @@ export function Layout() {
   const role = userProfile?.role ?? 'CUSTOMER';
   const cashierBranchPath = '/cashier/select-branch';
   const cashierBranchId = userProfile?.activeBranchId ?? userProfile?.assignedBranchId;
+  const cashierStoreId = userProfile?.activeStoreId;
 
   // Route guard by role
   useEffect(() => {
@@ -33,6 +34,12 @@ export function Layout() {
       // Cashier must choose a branch first before opening the dashboard.
       if (!cashierBranchId && location.pathname !== cashierBranchPath) {
         navigate(cashierBranchPath, { replace: true });
+        return;
+      }
+
+      // Cashier must choose a store assignment for realtime branch-store queue.
+      if (!cashierStoreId && location.pathname !== cashierBranchPath) {
+        navigate(cashierBranchPath, { replace: true });
       }
     } else if (role === 'ADMIN' && !location.pathname.startsWith('/admin')) {
       navigate('/admin', { replace: true });
@@ -41,7 +48,7 @@ export function Layout() {
         navigate('/home', { replace: true });
       }
     }
-  }, [role, location.pathname, firebaseUser, navigate, cashierBranchPath, cashierBranchId, authLoading]);
+  }, [role, location.pathname, firebaseUser, navigate, cashierBranchPath, cashierBranchId, cashierStoreId, authLoading]);
 
   if (authLoading) {
     return (

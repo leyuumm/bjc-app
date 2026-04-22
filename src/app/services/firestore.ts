@@ -109,6 +109,7 @@ export async function getCategories(storeId: string): Promise<ProductCategoryDoc
 export async function createOrder(
   userId: string,
   branchId: string,
+  storeId: string,
   orderDetails: OrderItemDoc[],
   total: number,
   paymentMethod: string,
@@ -122,6 +123,7 @@ export async function createOrder(
     orderId,
     userId,
     branchId,
+    storeId,
     orderDetails,
     status: 'Pending',
     timestamp: new Date(),
@@ -254,13 +256,18 @@ export async function seedDocument(collectionName: string, docId: string, data: 
 
 export function onBranchOrdersSnapshot(
   branchId: string,
+  storeId: string | null,
   callback: (orders: OrderDoc[]) => void,
 ): Unsubscribe {
-  const q = query(
-    collection(db, ORDERS),
+  const constraints = [
     where('branchId', '==', branchId),
     orderBy('timestamp', 'desc'),
-  );
+  ] as const;
+
+  const q = storeId
+    ? query(collection(db, ORDERS), where('branchId', '==', branchId), where('storeId', '==', storeId), orderBy('timestamp', 'desc'))
+    : query(collection(db, ORDERS), ...constraints);
+
   return onSnapshot(q, snap => {
     callback(snap.docs.map(d => d.data() as OrderDoc));
   });

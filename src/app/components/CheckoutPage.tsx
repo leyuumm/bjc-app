@@ -102,6 +102,7 @@ export function CheckoutPage() {
     const orderDoc = await createOrder(
       userId,
       selectedBranch!,
+      selectedBrand!,
       mapCartToOrderItems(cart),
       subtotal,
       paymentMethod,

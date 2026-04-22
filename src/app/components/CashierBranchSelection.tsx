@@ -7,11 +7,20 @@ import { useAppContext } from './AppContext';
 import { getAllBranches } from '../services/firestore';
 import { logout, updateUserProfile } from '../services/auth';
 import type { BranchDoc } from '../types/firestore';
+import type { StoreId } from '../types/menu';
 
 const STORE_LABELS: Record<string, string> = {
   lehmuhn: 'Leh-muhn',
   kohfee: 'Koh-fee',
 };
+
+function getLocationKey(branchName: string): string {
+  return branchName
+    .replace(/^Leh-?Muhn\s*/i, '')
+    .replace(/^Koh-?Fee\s*/i, '')
+    .trim()
+    .toLowerCase();
+}
 
 export function CashierBranchSelection() {
   const navigate = useNavigate();
@@ -25,11 +34,21 @@ export function CashierBranchSelection() {
 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [savingBranchId, setSavingBranchId] = useState('');
+  const [saving, setSaving] = useState(false);
   const [branches, setBranches] = useState<BranchDoc[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedStoreId, setSelectedStoreId] = useState<StoreId | ''>('');
 
   const assignedBranchId = userProfile?.assignedBranchId ?? '';
+  const assignedBranchIds = userProfile?.assignedBranchIds ?? [];
   const activeBranchId = userProfile?.activeBranchId ?? '';
+  const assignedStoreIds = (userProfile?.assignedStoreIds ?? []) as StoreId[];
+  const activeStoreId = (userProfile?.activeStoreId ?? '') as StoreId | '';
+
+  useEffect(() => {
+    setSelectedBranchId(activeBranchId);
+    setSelectedStoreId(activeStoreId);
+  }, [activeBranchId, activeStoreId]);
 
   useEffect(() => {
     if (!userProfile) return;
@@ -60,9 +79,17 @@ export function CashierBranchSelection() {
   }, []);
 
   const visibleBranches = useMemo(() => {
-    const scoped = assignedBranchId
-      ? branches.filter((branch) => branch.branchId === assignedBranchId)
-      : branches;
+    let scoped = branches;
+
+    if (assignedBranchIds.length > 0) {
+      scoped = branches.filter((branch) => assignedBranchIds.includes(branch.branchId));
+    } else if (assignedBranchId) {
+      const anchor = branches.find((branch) => branch.branchId === assignedBranchId);
+      const locationKey = anchor ? getLocationKey(anchor.branchName) : '';
+      scoped = locationKey
+        ? branches.filter((branch) => getLocationKey(branch.branchName) === locationKey)
+        : branches.filter((branch) => branch.branchId === assignedBranchId);
+    }
 
     const term = search.trim().toLowerCase();
     if (!term) return scoped;
@@ -71,21 +98,80 @@ export function CashierBranchSelection() {
       branch.branchName.toLowerCase().includes(term)
       || branch.address.toLowerCase().includes(term)
     ));
-  }, [assignedBranchId, branches, search]);
+  }, [assignedBranchId, assignedBranchIds, branches, search]);
 
-  const handleSelectBranch = async (branchId: string) => {
-    if (!firebaseUser || savingBranchId) return;
+  const availableStoreIds = useMemo(() => {
+    const branch = visibleBranches.find((item) => item.branchId === selectedBranchId);
+    if (!branch) return [];
+    const locationKey = getLocationKey(branch.branchName);
 
-    setSavingBranchId(branchId);
+    const storesInLocation = visibleBranches
+      .filter((item) => getLocationKey(item.branchName) === locationKey)
+      .map((item) => item.storeId as StoreId);
+
+    const uniqueStores = [...new Set(storesInLocation)];
+    if (assignedStoreIds.length === 0) return uniqueStores;
+    return uniqueStores.filter((storeId) => assignedStoreIds.includes(storeId));
+  }, [assignedStoreIds, visibleBranches, selectedBranchId]);
+
+  useEffect(() => {
+    if (availableStoreIds.length === 0) {
+      setSelectedStoreId('');
+      return;
+    }
+    if (!selectedStoreId || !availableStoreIds.includes(selectedStoreId)) {
+      setSelectedStoreId(availableStoreIds[0]);
+    }
+  }, [availableStoreIds, selectedStoreId]);
+
+  const handleSelectBranch = (branchId: string) => {
+    setSelectedBranchId(branchId);
+  };
+
+  const handleContinue = async () => {
+    if (!firebaseUser || saving) return;
+    if (!selectedBranchId) {
+      toast.error('Please select your branch first.');
+      return;
+    }
+    if (!selectedStoreId) {
+      toast.error('Please select your store assignment.');
+      return;
+    }
+
+    const selectedBranch = visibleBranches.find((item) => item.branchId === selectedBranchId);
+    if (!selectedBranch) {
+      toast.error('Selected branch is no longer available.');
+      return;
+    }
+
+    const locationKey = getLocationKey(selectedBranch.branchName);
+    const resolvedBranch = visibleBranches.find((item) => (
+      getLocationKey(item.branchName) === locationKey
+      && (item.storeId as StoreId) === selectedStoreId
+    ));
+
+    if (!resolvedBranch) {
+      toast.error('No matching branch found for the selected store in this location.');
+      return;
+    }
+
+    setSaving(true);
     try {
-      await updateUserProfile(firebaseUser.uid, { activeBranchId: branchId });
-      updateUserProfileLocal({ activeBranchId: branchId });
-      toast.success('Branch selected. You can now receive branch orders.');
+      await updateUserProfile(firebaseUser.uid, {
+        activeBranchId: resolvedBranch.branchId,
+        activeStoreId: selectedStoreId,
+      });
+      updateUserProfileLocal({
+        activeBranchId: resolvedBranch.branchId,
+        activeStoreId: selectedStoreId,
+      });
+      toast.success('Cashier session is now synced to your branch and store.');
       navigate('/cashier', { replace: true });
     } catch {
-      toast.error('Failed to set active branch. Please try again.');
+      toast.error('Failed to save assignment. Please try again.');
     } finally {
-      setSavingBranchId('');
+      setSaving(false);
     }
   };
 
@@ -120,13 +206,13 @@ export function CashierBranchSelection() {
         </button>
       </div>
 
-      {assignedBranchId && (
+      {(assignedBranchId || assignedBranchIds.length > 0) && (
         <div className="mb-4 rounded-[12px] border border-[#81C784] bg-[#E8F5E9] px-3 py-2.5">
           <p className="text-[13px] text-[#2E7D32]" style={{ fontWeight: 600 }}>
-            Admin assigned this cashier account to one branch.
+            Admin assigned this cashier account to your allowed branch/location.
           </p>
           <p className="text-[12px] text-[#2E7D32] mt-0.5">
-            Select the assigned branch to continue.
+            Select your active branch and store before receiving realtime orders.
           </p>
         </div>
       )}
@@ -162,8 +248,7 @@ export function CashierBranchSelection() {
       {!loading && visibleBranches.length > 0 && (
         <div className="space-y-3">
           {visibleBranches.map((branch, index) => {
-            const isSelected = activeBranchId === branch.branchId;
-            const isSaving = savingBranchId === branch.branchId;
+            const isSelected = selectedBranchId === branch.branchId;
 
             return (
               <motion.button
@@ -172,7 +257,7 @@ export function CashierBranchSelection() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.04 }}
                 onClick={() => handleSelectBranch(branch.branchId)}
-                disabled={Boolean(savingBranchId)}
+                disabled={saving}
                 className="w-full rounded-[16px] p-4 text-left border cursor-pointer transition-all disabled:opacity-60"
                 style={{
                   borderColor: isSelected ? '#00704A' : 'rgba(0,0,0,0.08)',
@@ -198,9 +283,7 @@ export function CashierBranchSelection() {
                   </div>
 
                   <div className="shrink-0">
-                    {isSaving ? (
-                      <Loader2 size={20} color="#00704A" className="animate-spin" />
-                    ) : isSelected ? (
+                    {isSelected ? (
                       <CheckCircle2 size={20} color="#2E7D32" />
                     ) : null}
                   </div>
@@ -210,6 +293,48 @@ export function CashierBranchSelection() {
           })}
         </div>
       )}
+
+      {!loading && availableStoreIds.length > 0 && (
+        <div className="mt-5">
+          <p className="text-[12px] text-[#757575] mb-2 uppercase tracking-wide" style={{ fontWeight: 600 }}>
+            Assigned Store
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {availableStoreIds.map((storeId) => {
+              const active = selectedStoreId === storeId;
+              return (
+                <button
+                  key={storeId}
+                  onClick={() => setSelectedStoreId(storeId)}
+                  disabled={saving}
+                  className={`rounded-[12px] px-3 py-3 text-[14px] border cursor-pointer transition-all ${
+                    active
+                      ? 'bg-[#00704A] border-[#00704A] text-white'
+                      : 'bg-white border-[rgba(0,0,0,0.1)] text-[#362415]'
+                  }`}
+                  style={{ fontWeight: 600 }}
+                >
+                  {STORE_LABELS[storeId] ?? storeId}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <button
+        onClick={handleContinue}
+        disabled={loading || saving || !selectedBranchId || !selectedStoreId}
+        className="w-full mt-6 py-3.5 rounded-[14px] text-white text-[15px] cursor-pointer flex items-center justify-center gap-2"
+        style={{
+          background: '#00704A',
+          fontWeight: 700,
+          opacity: loading || saving || !selectedBranchId || !selectedStoreId ? 0.5 : 1,
+        }}
+      >
+        {saving && <Loader2 size={18} className="animate-spin" />}
+        Continue to Cashier Dashboard
+      </button>
     </div>
   );
 }

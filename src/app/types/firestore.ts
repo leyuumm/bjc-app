@@ -11,7 +11,10 @@ export interface UserDoc {
   loyaltyPoints: number;
   role: UserRole;
   assignedBranchId?: string;
+  assignedBranchIds?: string[];
   activeBranchId?: string;
+  assignedStoreIds?: string[];
+  activeStoreId?: string;
   createdAt: Date;
 }
 
@@ -76,6 +79,7 @@ export interface OrderDoc {
   orderId: string;
   userId: string;
   branchId: string;
+  storeId?: string;
   orderDetails: OrderItemDoc[];
   status: OrderStatusEnum;
   timestamp: Date;

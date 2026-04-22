@@ -71,7 +71,7 @@ export function AdminOverview() {
 
     setBranchOrders({});
 
-    const unsubs = branches.map((branch) => onBranchOrdersSnapshot(branch.branchId, (orders) => {
+    const unsubs = branches.map((branch) => onBranchOrdersSnapshot(branch.branchId, null, (orders) => {
       setBranchOrders((prev) => ({ ...prev, [branch.branchId]: orders }));
     }));
 
