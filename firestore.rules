@@ -16,6 +16,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    function getUserActiveBranchId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeBranchId;
+    }
+
+    function getUserActiveStoreId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activeStoreId;
+    }
+
     function isAdmin() {
       return isAuthenticated() && getUserRole() == 'ADMIN';
     }
@@ -28,13 +36,35 @@ service cloud.firestore {
       return isAuthenticated() && getUserRole() == 'CUSTOMER';
     }
 
+    // Prevent self-escalation: user cannot change their own role, branchId, storeId, or assignments
+    function isNotSelfEscalating() {
+      let currentData = resource.data;
+      let newData = request.resource.data;
+      return (
+        !('role' in newData) || newData.role == currentData.role
+      ) && (
+        !('branchId' in newData) || newData.branchId == currentData.branchId
+      ) && (
+        !('storeId' in newData) || newData.storeId == currentData.storeId
+      ) && (
+        !('assignedBranches' in newData) || newData.assignedBranches == currentData.assignedBranches
+      ) && (
+        !('assignedStores' in newData) || newData.assignedStores == currentData.assignedStores
+      );
+    }
+
+    function isValidOrderStatus(status) {
+      return status in ['Pending', 'Preparing', 'Ready', 'Completed', 'Cancelled'];
+    }
+
     // ─── Users ──────────────────────────────────────────────────────
     // Users can read/write their own profile. Admins can read all.
+    // Self-escalation (role/assignments) is blocked.
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if (isOwner(userId) && isNotSelfEscalating()) || isAdmin();
       allow delete: if isAdmin();
     }
 
@@ -72,14 +102,27 @@ service cloud.firestore {
 
     // ─── Orders ─────────────────────────────────────────────────────
     // Customers can create orders and read their own orders.
-    // Cashiers/Admins can read all orders and update status.
+    // Cashiers can read orders only for their activeBranchId + activeStoreId.
+    // Admins can read all orders.
 
     match /orders/{orderId} {
-      allow read: if isAuthenticated() &&
-        (isOwner(resource.data.userId) || isCashier());
+      // Read: owner sees own, cashier sees only branch/store matches, admin sees all
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.userId) ||
+        isAdmin() ||
+        (isCashier() &&
+         resource.data.branchId == getUserActiveBranchId() &&
+         (getUserActiveStoreId() == null || resource.data.storeId == getUserActiveStoreId()))
+      );
+      // Create: validate branchId/storeId exist, status must be Pending
       allow create: if isAuthenticated() &&
-        request.resource.data.userId == request.auth.uid;
-      allow update: if isCashier() ||
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.branchId != null &&
+        request.resource.data.storeId != null &&
+        request.resource.data.status == 'Pending' &&
+        isValidOrderStatus(request.resource.data.status);
+      // Update: cashier can update status within valid values, customer can cancel pending
+      allow update: if isCashier() && isValidOrderStatus(request.resource.data.status) ||
         // Customer can cancel their own pending order
         (isOwner(resource.data.userId) &&
          resource.data.status == 'Pending' &&
@@ -102,10 +145,16 @@ service cloud.firestore {
 
     // ─── Notifications ──────────────────────────────────────────────
     // Users can only read their own notifications.
+    // Only admins can create for other users. Users create only for themselves.
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      allow create: if isAuthenticated();
+      // Create: user can only create notifications for themselves
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.title != null &&
+        request.resource.data.message != null;
+      // Update: user can only update their own notifications (e.g., mark as read)
       allow update: if isAuthenticated() && isOwner(resource.data.userId);
       allow delete: if isAdmin();
     }

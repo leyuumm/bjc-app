@@ -258,6 +258,7 @@ export function onBranchOrdersSnapshot(
   branchId: string,
   storeId: string | null,
   callback: (orders: OrderDoc[]) => void,
+  onError?: (error: Error) => void,
 ): Unsubscribe {
   const constraints = [
     where('branchId', '==', branchId),
@@ -268,9 +269,15 @@ export function onBranchOrdersSnapshot(
     ? query(collection(db, ORDERS), where('branchId', '==', branchId), where('storeId', '==', storeId), orderBy('timestamp', 'desc'))
     : query(collection(db, ORDERS), ...constraints);
 
-  return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => d.data() as OrderDoc));
-  });
+  return onSnapshot(q,
+    snap => {
+      callback(snap.docs.map(d => d.data() as OrderDoc));
+    },
+    error => {
+      console.error('Firestore snapshot error:', error);
+      if (onError) onError(error as Error);
+    }
+  );
 }
 
 export function onUserNotificationsSnapshot(

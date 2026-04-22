@@ -66,12 +66,23 @@ export function CashierDashboard() {
       setLoading(false);
       return;
     }
+
+    const timeoutId = setTimeout(() => setLoading(false), 10000);
+
     const unsub = onBranchOrdersSnapshot(branchId, storeId, (docs) => {
+      clearTimeout(timeoutId);
       setOrderDocs(docs);
       setOrders(docs.map(mapOrderDocToOrder));
       setLoading(false);
+    }, (error) => {
+      clearTimeout(timeoutId);
+      console.error('Cashier orders snapshot error:', error);
+      setLoading(false);
     });
-    return unsub;
+    return () => {
+      clearTimeout(timeoutId);
+      unsub();
+    };
   }, [branchId, storeId]);
 
   useEffect(() => {

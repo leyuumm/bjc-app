@@ -1,8 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { AlertCircle, Camera, Check, Loader2, Menu, User } from 'lucide-react';
-import { Capacitor } from '@capacitor/core';
-import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useAppContext } from './AppContext';
 import { AdminNavPanel } from './AdminNavPanel';
 import { updateUserProfile } from '../services/auth';
@@ -72,28 +70,15 @@ export function AdminProfilePage() {
     setProfileImage(userProfile?.profileImage ?? '');
   };
 
-  const readGalleryPermission = async (): Promise<PermissionStatus> => {
-    if (!Capacitor.isNativePlatform()) return 'granted';
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const permission = await CapacitorCamera.checkPermissions();
-    return normalizePermission(permission.photos ?? permission.camera);
+  const readGalleryPermission = async (): Promise<PermissionStatus> => {
+    return 'granted';
   };
 
   const requestGalleryPermission = async (): Promise<boolean> => {
-    if (!Capacitor.isNativePlatform()) {
-      setPermissionStatus('granted');
-      return true;
-    }
-
-    try {
-      const permission = await CapacitorCamera.requestPermissions();
-      const status = normalizePermission(permission.photos ?? permission.camera);
-      setPermissionStatus(status);
-      return status === 'granted';
-    } catch {
-      setPermissionStatus('denied');
-      return false;
-    }
+    setPermissionStatus('granted');
+    return true;
   };
 
   useEffect(() => {
@@ -134,51 +119,30 @@ export function AdminProfilePage() {
 
   const pickImageFromGallery = async () => {
     if (savingProfile) return;
+    fileInputRef.current?.click();
+  };
 
-    if (Capacitor.isNativePlatform()) {
-      let status = permissionStatus;
-      if (status !== 'granted') {
-        const granted = await requestGalleryPermission();
-        status = granted ? 'granted' : 'denied';
-      }
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      if (status !== 'granted') {
-        fallbackToRecentProfileImage();
-        toast.error('Gallery permission denied. Showing recent photo if available.');
-        return;
-      }
-
-      setSavingProfile(true);
-      try {
-        const photo = await CapacitorCamera.getPhoto({
-          source: CameraSource.Photos,
-          resultType: CameraResultType.Uri,
-          quality: 85,
-        });
-
-        if (!photo.webPath) {
-          throw new Error('Missing image path.');
-        }
-
-        const response = await fetch(photo.webPath);
-        const blob = await response.blob();
-        if (blob.size > 5 * 1024 * 1024) {
-          toast.error('Image must be less than 5MB');
-          return;
-        }
-
-        const base64 = await toDataUrl(blob);
-        await saveProfileImage(base64);
-      } catch {
-        toast.error('Failed to pick image from gallery');
-      } finally {
-        setSavingProfile(false);
-      }
-
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
       return;
     }
 
-    toast.message('Gallery picker is optimized for Android build.');
+    setSavingProfile(true);
+    try {
+      const base64 = await toDataUrl(file);
+      await saveProfileImage(base64);
+    } catch {
+      toast.error('Failed to pick image from gallery');
+    } finally {
+      setSavingProfile(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const removeProfileImage = async () => {
@@ -212,6 +176,13 @@ export function AdminProfilePage() {
 
   return (
     <div className="px-4 pt-10 pb-6">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
       <div className="flex items-center gap-2 mb-1">
         <button
           onClick={() => setShowNavPanel(true)}
