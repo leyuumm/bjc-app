@@ -126,6 +126,11 @@ export function CashierBranchSelection() {
 
   const handleSelectBranch = (branchId: string) => {
     setSelectedBranchId(branchId);
+    // Auto-select store based on the selected branch's storeId
+    const branch = visibleBranches.find((b) => b.branchId === branchId);
+    if (branch?.storeId) {
+      setSelectedStoreId(branch.storeId as StoreId);
+    }
   };
 
   const handleContinue = async () => {
@@ -305,7 +310,14 @@ export function CashierBranchSelection() {
               return (
                 <button
                   key={storeId}
-                  onClick={() => setSelectedStoreId(storeId)}
+                  onClick={() => {
+                    setSelectedStoreId(storeId);
+                    // Auto-select the corresponding branch for this store
+                    const branchForStore = visibleBranches.find((b) => b.storeId === storeId);
+                    if (branchForStore) {
+                      setSelectedBranchId(branchForStore.branchId);
+                    }
+                  }}
                   disabled={saving}
                   className={`rounded-[12px] px-3 py-3 text-[14px] border cursor-pointer transition-all ${
                     active
@@ -322,6 +334,14 @@ export function CashierBranchSelection() {
         </div>
       )}
 
+      {selectedBranchId && selectedStoreId && (
+        <div className="mt-4 rounded-[10px] bg-[#FFF3E0] border border-[#FFB74D] px-3 py-2.5">
+          <p className="text-[12px] text-[#E65100]" style={{ fontWeight: 500 }}>
+            Selected: <span style={{ fontWeight: 700 }}>{branches.find(b => b.branchId === selectedBranchId)?.branchName}</span> at <span style={{ fontWeight: 700 }}>{STORE_LABELS[selectedStoreId] ?? selectedStoreId}</span>
+          </p>
+        </div>
+      )}
+
       <button
         onClick={handleContinue}
         disabled={loading || saving || !selectedBranchId || !selectedStoreId}
@@ -333,7 +353,7 @@ export function CashierBranchSelection() {
         }}
       >
         {saving && <Loader2 size={18} className="animate-spin" />}
-        Continue to Cashier Dashboard
+        Confirm Selection
       </button>
     </div>
   );
