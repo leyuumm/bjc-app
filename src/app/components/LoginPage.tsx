@@ -235,7 +235,7 @@ export function LoginPage() {
           }} className="text-white mb-4 cursor-pointer">
             <ArrowLeft size={24} />
           </button>
-          <img src="/beyond-jc-group-opc-logo.svg" alt="Beyond JC Group OPC logo" className="w-[150px] h-auto mb-2" />
+          <img src="https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/jc%20group.png/:/rs=w:400,h:400,cg:true,m/cr=w:400,h:400/qt=q:95" alt="Beyond JC Group OPC logo" className="w-[150px] h-auto mb-2" />
           <h1 className="text-white text-[28px]" style={{ fontWeight: 700 }}>
             {googleProfileMode ? 'Almost There' : 'Welcome'}
           </h1>

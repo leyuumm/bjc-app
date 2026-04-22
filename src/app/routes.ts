@@ -14,6 +14,8 @@ import { CashierBranchSelection } from './components/CashierBranchSelection';
 import { RewardsPage } from './components/RewardsPage';
 import { ProfilePage } from './components/ProfilePage';
 import { AdminDashboard } from './components/AdminDashboard';
+import { AdminOverview } from './components/AdminOverview';
+import { AdminProfilePage } from './components/AdminProfilePage';
 
 export const router = createBrowserRouter([
   {
@@ -40,7 +42,9 @@ export const router = createBrowserRouter([
       { path: 'cashier/select-branch', Component: CashierBranchSelection },
       { path: 'rewards', Component: RewardsPage },
       { path: 'profile', Component: ProfilePage },
-      { path: 'admin', Component: AdminDashboard },
+      { path: 'admin', Component: AdminOverview },
+      { path: 'admin/products', Component: AdminDashboard },
+      { path: 'admin/profile', Component: AdminProfilePage },
       { path: '*', Component: StoreSelection },
     ],
   },

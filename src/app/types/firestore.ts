@@ -7,6 +7,7 @@ export interface UserDoc {
   name: string;
   email: string;
   phone: string;
+  profileImage?: string;
   loyaltyPoints: number;
   role: UserRole;
   assignedBranchId?: string;

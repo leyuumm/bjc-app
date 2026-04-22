@@ -3,10 +3,10 @@ import { Outlet, useLocation, useNavigate } from 'react-router';
 import { BottomNav } from './BottomNav';
 import { useAppContext } from './AppContext';
 import { NotificationPanel } from './NotificationPanel';
-import { Bell } from 'lucide-react';
+import { Bell, Loader2 } from 'lucide-react';
 
 export function Layout() {
-  const { userProfile, unreadNotificationsCount } = useAppContext();
+  const { firebaseUser, userProfile, unreadNotificationsCount, authLoading } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
@@ -17,7 +17,13 @@ export function Layout() {
 
   // Route guard by role
   useEffect(() => {
-    if (!userProfile) return;
+    if (authLoading) return;
+
+    if (!firebaseUser) {
+      navigate('/splash', { replace: true });
+      return;
+    }
+
     if (role === 'CASHIER') {
       if (!location.pathname.startsWith('/cashier')) {
         navigate(cashierBranchPath, { replace: true });
@@ -35,7 +41,21 @@ export function Layout() {
         navigate('/home', { replace: true });
       }
     }
-  }, [role, location.pathname, userProfile, navigate, cashierBranchPath, cashierBranchId]);
+  }, [role, location.pathname, firebaseUser, navigate, cashierBranchPath, cashierBranchId, authLoading]);
+
+  if (authLoading) {
+    return (
+      <div className="flex justify-center bg-[#F0F0F0] min-h-screen">
+        <div className="w-full max-w-[412px] min-h-screen bg-white relative flex items-center justify-center" style={{ fontFamily: "'Roboto', sans-serif" }}>
+          <Loader2 size={28} color="#00704A" className="animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!firebaseUser) {
+    return null;
+  }
 
   return (
     <div className="flex justify-center bg-[#F0F0F0] min-h-screen">

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, LogOut, Megaphone } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, Menu, Megaphone } from 'lucide-react';
 import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories, createAnnouncement } from '../services/firestore';
 import type { ProductDoc, ProductCategoryDoc } from '../types/firestore';
 import type { StoreId } from '../types/menu';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router';
 import { useAppContext } from './AppContext';
-import { logout } from '../services/auth';
+import { AdminNavPanel } from './AdminNavPanel';
 
 const emptyForm: ProductDoc = {
   productId: '',
@@ -22,10 +22,11 @@ const emptyForm: ProductDoc = {
 
 export function AdminDashboard() {
   const navigate = useNavigate();
-  const { resetState, setIsLoggedIn, userProfile, authLoading } = useAppContext();
+  const { userProfile, authLoading } = useAppContext();
   const [activeStore, setActiveStore] = useState<StoreId>('lehmuhn');
   const [products, setProducts] = useState<ProductDoc[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showNavPanel, setShowNavPanel] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductDoc | null>(null);
   const [form, setForm] = useState<ProductDoc>(emptyForm);
@@ -153,23 +154,17 @@ export function AdminDashboard() {
 
   return (
     <div className="px-4 pt-10 pb-6">
-      <div className="flex items-center justify-between mb-1">
-        <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Admin Dashboard</h1>
+      <div className="flex items-center gap-2 mb-1">
         <button
-          onClick={async () => {
-            await logout();
-            resetState();
-            setIsLoggedIn(false);
-            navigate('/splash');
-          }}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-[10px] border border-[#D32F2F] text-[#D32F2F] text-[13px] cursor-pointer"
-          style={{ fontWeight: 600 }}
+          onClick={() => setShowNavPanel(true)}
+          aria-label="Open admin menu"
+          className="flex items-center justify-center w-10 h-10 rounded-full text-[#362415] cursor-pointer hover:bg-[#F2F2F2] transition-colors"
         >
-          <LogOut size={16} />
-          Sign Out
+          <Menu size={20} />
         </button>
+        <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Manage Products</h1>
       </div>
-      <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Manage products</p>
+      <p className="text-[13px] text-[#757575] mt-0.5 mb-4">Add, edit, and remove product catalog</p>
 
       {/* Store Tabs */}
       <div className="flex gap-2 mb-4">
@@ -520,6 +515,8 @@ export function AdminDashboard() {
           </>
         )}
       </AnimatePresence>
+
+      <AdminNavPanel open={showNavPanel} onClose={() => setShowNavPanel(false)} />
     </div>
   );
 }

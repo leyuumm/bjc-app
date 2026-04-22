@@ -15,7 +15,7 @@ export function SplashPage() {
           transition={{ duration: 0.6, type: 'spring' }}
           className="w-[240px] mb-8"
         >
-          <img src="/beyond-jc-group-opc-logo.svg" alt="Beyond JC Group OPC logo" className="w-full h-auto" />
+          <img src="https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/jc%20group.png/:/rs=w:400,h:400,cg:true,m/cr=w:400,h:400/qt=q:95" alt="Beyond JC Group OPC logo" className="w-full h-auto" />
         </motion.div>
 
         <motion.p
