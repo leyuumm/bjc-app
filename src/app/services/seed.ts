@@ -5,7 +5,7 @@
  *
  * Usage:  import { seedFirestore } from '../services/seed';  seedFirestore();
  */
-import { seedDocument } from './firestore';
+import { seedDocument, removeLegacyBasePriceFromProducts } from './firestore';
 import { branches, products } from '../components/data';
 import type { Product, LehmuhnProduct, KohfeeProduct } from '../types/menu';
 
@@ -26,7 +26,6 @@ function buildMeta(p: Product): Record<string, unknown> {
     storeId: p.storeId,
     name: p.name,
     description: p.description,
-    basePrice: p.basePrice,
     image: p.image,
     isPremium: p.isPremium,
   };
@@ -115,4 +114,13 @@ export async function seedFirestore() {
   }
 
   console.log('[Seed] Firestore seed complete ✓');
+}
+
+/**
+ * One-time cleanup helper for legacy duplicated pricing field.
+ * Usage: import { cleanupLegacyMetaBasePrice } from '../services/seed'; await cleanupLegacyMetaBasePrice();
+ */
+export async function cleanupLegacyMetaBasePrice() {
+  const updatedCount = await removeLegacyBasePriceFromProducts();
+  console.log(`[Cleanup] Removed meta.basePrice from ${updatedCount} product(s).`);
 }

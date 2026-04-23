@@ -18,15 +18,15 @@ export const MENU_SIZE_RULES: {
 } = {
   lehmuhn: {
     COLD: [16, 22],
-    HOT: [12],
-    BLENDED: [16],
+    HOT: [16, 22],
+    BLENDED: [16, 22],
     SPARKLING: [16, 22],
   },
   kohfee: {
-    COLD: [16],
-    HOT: [12],
-    BLENDED: [16],
-    FOOD: [],
+    COLD: [16, 22],
+    HOT: [16, 22],
+    BLENDED: [16, 22],
+    FOOD: [16, 22],
   },
 };
 

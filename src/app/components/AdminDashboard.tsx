@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Edit2, Trash2, X, Save, Loader2, Package, Search, Menu, Megaphone } from 'lucide-react';
-import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories, createAnnouncement } from '../services/firestore';
+import { onProductsSnapshot, deleteProduct, addProduct, updateProduct, getCategories, createAnnouncement, notifyCustomersWhatsNew } from '../services/firestore';
 import type { ProductDoc, ProductCategoryDoc } from '../types/firestore';
 import type { StoreId } from '../types/menu';
 import { toast } from 'sonner';
@@ -20,6 +20,26 @@ const emptyForm: ProductDoc = {
   meta: {},
 };
 
+const TEMPERATURE_CATEGORY_OPTIONS = [
+  { value: 'hot', label: 'Hot' },
+  { value: 'cold', label: 'Cold' },
+  { value: 'hot-cold', label: 'Hot & Cold' },
+] as const;
+
+function isValidHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function isKohfeeFoodCategory(storeId: string, categoryId?: string): boolean {
+  const normalized = (categoryId ?? '').trim().toLowerCase();
+  return storeId === 'kohfee' && (normalized === 'kf-food' || normalized === 'food');
+}
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { userProfile, authLoading } = useAppContext();
@@ -35,8 +55,22 @@ export function AdminDashboard() {
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState<ProductCategoryDoc[]>([]);
   const [metaDescription, setMetaDescription] = useState('');
-  const [metaIsPremium, setMetaIsPremium] = useState(false);
+  const [metaIsBestSeller, setMetaIsBestSeller] = useState(false);
+  const [metaIsFanFave, setMetaIsFanFave] = useState(false);
+  const [metaIsTrending, setMetaIsTrending] = useState(false);
+  const [lehmuhnGrandePrice, setLehmuhnGrandePrice] = useState('');
+  const [lehmuhnExtraGrandePrice, setLehmuhnExtraGrandePrice] = useState('');
   const [notifyUsers, setNotifyUsers] = useState(false);
+
+  const categoryOptions = React.useMemo(() => {
+    const baseOptions = categories.map(cat => ({
+      value: cat.categoryId,
+      label: cat.name,
+    }));
+    const existingValues = new Set(baseOptions.map(option => option.value));
+    const temperatureOptions = TEMPERATURE_CATEGORY_OPTIONS.filter(option => !existingValues.has(option.value));
+    return [...temperatureOptions, ...baseOptions];
+  }, [categories]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -61,12 +95,26 @@ export function AdminDashboard() {
   const filtered = products.filter(p =>
     p.productName.toLowerCase().includes(search.toLowerCase()),
   );
+  const isFoodPricingMode = isKohfeeFoodCategory(form.storeId, form.categoryId);
+  const hasRequiredFields = Boolean(
+    form.productName.trim() &&
+    form.imageUrl.trim() &&
+    (
+      isFoodPricingMode
+        ? Number.isFinite(Number(form.price)) && Number(form.price) > 0
+        : (lehmuhnGrandePrice.trim() && Number(lehmuhnGrandePrice) > 0)
+    ),
+  );
 
   const openAddForm = () => {
     setEditingProduct(null);
     setForm({ ...emptyForm, storeId: activeStore });
     setMetaDescription('');
-    setMetaIsPremium(false);
+    setMetaIsBestSeller(false);
+    setMetaIsFanFave(false);
+    setMetaIsTrending(false);
+    setLehmuhnGrandePrice('');
+    setLehmuhnExtraGrandePrice('');
     setNotifyUsers(false);
     setShowForm(true);
   };
@@ -76,29 +124,111 @@ export function AdminDashboard() {
     setForm({ ...product });
     const meta = (product.meta ?? {}) as Record<string, unknown>;
     setMetaDescription((meta.description as string) ?? '');
-    setMetaIsPremium((meta.isPremium as boolean) ?? false);
+    const isBestSeller = (meta.isBestSeller as boolean) ?? (meta.isPremium as boolean) ?? false;
+    const priceBySizeOz = (meta.priceBySizeOz as Partial<Record<number, number>> | undefined) ?? {};
+    setMetaIsBestSeller(isBestSeller);
+    setMetaIsFanFave((meta.isFanFave as boolean) ?? false);
+    setMetaIsTrending((meta.isTrending as boolean) ?? false);
+    const isFood = isKohfeeFoodCategory(product.storeId as StoreId, product.categoryId);
+    setLehmuhnGrandePrice(isFood ? '' : String(priceBySizeOz[16] ?? product.price ?? ''));
+    setLehmuhnExtraGrandePrice(isFood ? '' : String(priceBySizeOz[22] ?? ''));
     setShowForm(true);
   };
 
   const handleSave = async () => {
     if (userProfile?.role !== 'ADMIN') return;
-    if (!form.productName.trim() || !form.imageUrl.trim()) return;
+    const trimmedProductName = form.productName.trim();
+    const trimmedImageUrl = form.imageUrl.trim();
+    const trimmedCategoryId = (form.categoryId ?? '').trim();
+    if (!trimmedProductName) {
+      toast.error('Product name is required');
+      return;
+    }
+    if (trimmedProductName.length < 2) {
+      toast.error('Product name must be at least 2 characters');
+      return;
+    }
+    if (!trimmedCategoryId) {
+      toast.error('Category is required');
+      return;
+    }
+    if (!trimmedImageUrl) {
+      toast.error('Image URL is required');
+      return;
+    }
+    if (!isValidHttpUrl(trimmedImageUrl)) {
+      toast.error('Image URL must start with http:// or https://');
+      return;
+    }
     setSaving(true);
 
     try {
-      const meta = {
+      const baseMeta = {
         ...(form.meta ?? {}),
         description: metaDescription,
-        isPremium: metaIsPremium,
+        isBestSeller: metaIsBestSeller,
+        isFanFave: metaIsFanFave,
+        isTrending: metaIsTrending,
+        // Keep legacy key in sync with Best Seller for older readers.
+        isPremium: metaIsBestSeller,
       };
+      const isFood = isKohfeeFoodCategory(form.storeId, trimmedCategoryId);
+      const parsedFixedPrice = Number(form.price);
+      const parsedGrande = Number(lehmuhnGrandePrice);
+      const parsedExtraGrande = Number(lehmuhnExtraGrandePrice);
+      const hasFixedPrice = Number.isFinite(parsedFixedPrice) && parsedFixedPrice > 0;
+      const hasGrande = Number.isFinite(parsedGrande) && parsedGrande > 0;
+      const hasExtraGrande = Number.isFinite(parsedExtraGrande) && parsedExtraGrande > 0;
+      if (isFood && !hasFixedPrice) {
+        toast.error('Price is required for Food category');
+        setSaving(false);
+        return;
+      }
+      if (!isFood && !hasGrande) {
+        toast.error('Grande (16oz) price is required');
+        setSaving(false);
+        return;
+      }
+      const currentSizePrices = ((form.meta as Record<string, unknown> | undefined)?.priceBySizeOz as Partial<Record<number, number>> | undefined) ?? {};
+      const normalizedSizePrices: Partial<Record<number, number>> = {
+        ...currentSizePrices,
+      };
+
+      if (!isFood && hasGrande) {
+        normalizedSizePrices[16] = parsedGrande;
+      } else {
+        delete normalizedSizePrices[16];
+      }
+
+      if (!isFood && hasExtraGrande) {
+        normalizedSizePrices[22] = parsedExtraGrande;
+      } else {
+        delete normalizedSizePrices[22];
+      }
+      if (!isFood && hasExtraGrande && parsedExtraGrande < parsedGrande) {
+        toast.error('Extra Grande price must be greater than or equal to Grande');
+        setSaving(false);
+        return;
+      }
+
+      const {
+        priceBySizeOz: _ignoredPriceBySizeOz,
+        basePrice: _ignoredLegacyBasePrice,
+        ...restMeta
+      } = baseMeta as Record<string, unknown>;
+      const meta = {
+        ...restMeta,
+        ...(Object.keys(normalizedSizePrices).length > 0 ? { priceBySizeOz: normalizedSizePrices } : {}),
+      };
+      const normalizedBasePrice = isFood ? parsedFixedPrice : parsedGrande;
 
       if (editingProduct) {
         await updateProduct(editingProduct.productId, {
           storeId: form.storeId,
-          productName: form.productName.trim(),
-          price: form.price,
-          categoryId: form.categoryId,
-          imageUrl: form.imageUrl.trim(),
+          productName: trimmedProductName,
+          price: normalizedBasePrice,
+          categoryId: trimmedCategoryId,
+          imageUrl: trimmedImageUrl,
           isAvailable: form.isAvailable,
           meta,
         });
@@ -106,28 +236,36 @@ export function AdminDashboard() {
       } else {
         const newProduct = await addProduct({
           storeId: form.storeId,
-          productName: form.productName.trim(),
-          price: form.price,
-          categoryId: form.categoryId,
-          imageUrl: form.imageUrl.trim(),
+          productName: trimmedProductName,
+          price: normalizedBasePrice,
+          categoryId: trimmedCategoryId,
+          imageUrl: trimmedImageUrl,
           isAvailable: form.isAvailable,
           meta,
         });
         if (notifyUsers) {
           const storeName = form.storeId === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee';
+          const announcementTitle = `New item at ${storeName}!`;
+          const announcementMessage = `${trimmedProductName} is now available. Check it out!`;
           await createAnnouncement({
             storeId: form.storeId,
-            title: `New item at ${storeName}!`,
-            message: `${form.productName.trim()} is now available. Check it out!`,
-            imageUrl: form.imageUrl.trim() || undefined,
+            title: announcementTitle,
+            message: announcementMessage,
+            imageUrl: trimmedImageUrl || undefined,
             productId: newProduct.productId,
           });
+          try {
+            await notifyCustomersWhatsNew(announcementTitle, announcementMessage);
+          } catch (notificationErr) {
+            toast.error('Product saved, but failed to send customer notifications');
+          }
         }
         toast.success('Product added successfully');
       }
       setShowForm(false);
     } catch (err) {
-      toast.error('Failed to save product');
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to save product: ${message}`);
     } finally {
       setSaving(false);
     }
@@ -135,6 +273,10 @@ export function AdminDashboard() {
 
   const handleDelete = async (productId: string) => {
     if (userProfile?.role !== 'ADMIN') return;
+    if (!productId) {
+      toast.error('Invalid product ID');
+      return;
+    }
     try {
       await deleteProduct(productId);
       toast.success('Product deleted');
@@ -349,17 +491,6 @@ export function AdminDashboard() {
                   </div>
 
                   <div>
-                    <label className="text-[12px] text-[#757575] mb-1 block">Price (₱)</label>
-                    <input
-                      type="number"
-                      value={form.price || ''}
-                      onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
-                      placeholder="0"
-                      className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
-                    />
-                  </div>
-
-                  <div>
                     <label className="text-[12px] text-[#757575] mb-1 block">Store</label>
                     <div className="flex gap-2">
                       {(['lehmuhn', 'kohfee'] as StoreId[]).map(store => (
@@ -379,17 +510,53 @@ export function AdminDashboard() {
                     </div>
                   </div>
 
+                  {isFoodPricingMode ? (
+                    <div>
+                      <label className="text-[12px] text-[#757575] mb-1 block">Price (Fixed)</label>
+                      <input
+                        type="number"
+                        value={form.price || ''}
+                        onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
+                        placeholder="0"
+                        className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="text-[12px] text-[#757575] mb-1 block">Grande (16oz)</label>
+                        <input
+                          type="number"
+                          value={lehmuhnGrandePrice}
+                          onChange={e => setLehmuhnGrandePrice(e.target.value)}
+                          placeholder="0"
+                          className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[12px] text-[#757575] mb-1 block">Extra Grande (22oz)</label>
+                        <input
+                          type="number"
+                          value={lehmuhnExtraGrandePrice}
+                          onChange={e => setLehmuhnExtraGrandePrice(e.target.value)}
+                          placeholder="0"
+                          className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="text-[12px] text-[#757575] mb-1 block">Category</label>
-                    {categories.length > 0 ? (
+                    {categoryOptions.length > 0 ? (
                       <select
                         value={form.categoryId ?? ''}
                         onChange={e => setForm(f => ({ ...f, categoryId: e.target.value }))}
                         className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
                       >
                         <option value="">Select category</option>
-                        {categories.map(cat => (
-                          <option key={cat.categoryId} value={cat.categoryId}>{cat.name}</option>
+                        {categoryOptions.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
                         ))}
                       </select>
                     ) : (
@@ -436,16 +603,50 @@ export function AdminDashboard() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <label className="text-[14px] text-[#362415]" style={{ fontWeight: 500 }}>Premium</label>
+                    <label className="text-[14px] text-[#362415]" style={{ fontWeight: 500 }}>Best Seller</label>
                     <button
-                      onClick={() => setMetaIsPremium(v => !v)}
+                      onClick={() => setMetaIsBestSeller(v => !v)}
                       className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
-                        metaIsPremium ? 'bg-[#362415]' : 'bg-[#E0E0E0]'
+                        metaIsBestSeller ? 'bg-[#362415]' : 'bg-[#E0E0E0]'
                       }`}
                     >
                       <div
                         className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
-                          metaIsPremium ? 'translate-x-5' : 'translate-x-0'
+                          metaIsBestSeller ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-[14px] text-[#362415]" style={{ fontWeight: 500 }}>Fan Fave</label>
+                    <button
+                      onClick={() => setMetaIsFanFave(v => !v)}
+                      className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
+                        metaIsFanFave ? 'bg-[#7C3AED]' : 'bg-[#E0E0E0]'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
+                          metaIsFanFave ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                      />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <label className="text-[14px] text-[#362415]" style={{ fontWeight: 500 }}>Trending</label>
+                    <button
+                      onClick={() => setMetaIsTrending(v => !v)}
+                      className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
+                        metaIsTrending ? 'bg-[#F59E0B]' : 'bg-[#E0E0E0]'
+                      }`}
+                    >
+                      <div
+                        className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
+                          metaIsTrending ? 'translate-x-5' : 'translate-x-0'
                         }`}
                         style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
                       />
@@ -498,13 +699,13 @@ export function AdminDashboard() {
                 {/* Save Button */}
                 <button
                   onClick={handleSave}
-                  disabled={saving || !form.productName.trim() || !form.imageUrl.trim()}
+                  disabled={saving || !hasRequiredFields}
                   className="w-full mt-6 py-4 rounded-[16px] text-white text-[16px] cursor-pointer flex items-center justify-center gap-2"
                   style={{
                     background: '#00704A',
                     fontWeight: 600,
                     boxShadow: '0 4px 16px rgba(0,112,74,0.3)',
-                    opacity: saving || !form.productName.trim() || !form.imageUrl.trim() ? 0.5 : 1,
+                    opacity: saving || !hasRequiredFields ? 0.5 : 1,
                   }}
                 >
                   {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}

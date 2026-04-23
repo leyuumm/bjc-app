@@ -12,6 +12,7 @@ import {
   limit,
   onSnapshot,
   serverTimestamp,
+  deleteField,
   type Unsubscribe,
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
@@ -26,6 +27,7 @@ import type {
   NotificationDoc,
   AnnouncementDoc,
   OrderStatusEnum,
+  UserDoc,
 } from '../types/firestore';
 
 // ─── Collections ───────────────────────────────────────────────────
@@ -330,6 +332,27 @@ export async function updateProduct(productId: string, data: Partial<ProductDoc>
   await updateDoc(doc(db, PRODUCTS, productId), data);
 }
 
+export async function removeLegacyBasePriceFromProducts(): Promise<number> {
+  const snap = await getDocs(collection(db, PRODUCTS));
+  let updatedCount = 0;
+
+  for (const productDoc of snap.docs) {
+    const data = productDoc.data() as ProductDoc;
+    const meta = (data.meta ?? {}) as Record<string, unknown>;
+
+    if (!Object.prototype.hasOwnProperty.call(meta, 'basePrice')) {
+      continue;
+    }
+
+    await updateDoc(productDoc.ref, {
+      'meta.basePrice': deleteField(),
+    });
+    updatedCount += 1;
+  }
+
+  return updatedCount;
+}
+
 // ─── Announcements ─────────────────────────────────────────────────
 
 export async function createAnnouncement(
@@ -342,6 +365,39 @@ export async function createAnnouncement(
     timestamp: serverTimestamp(),
   });
   return announcement;
+}
+
+export async function notifyCustomersWhatsNew(
+  title: string,
+  message: string,
+): Promise<number> {
+  const usersQuery = query(collection(db, USERS), where('role', '==', 'CUSTOMER'));
+  const usersSnap = await getDocs(usersQuery);
+  let sentCount = 0;
+
+  for (const userDoc of usersSnap.docs) {
+    const userData = userDoc.data() as UserDoc;
+    if (!userData.userId) {
+      continue;
+    }
+
+    const notificationId = `NOTIF-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const notification: NotificationDoc = {
+      notificationId,
+      userId: userData.userId,
+      message: `${title} — ${message}`,
+      timestamp: new Date(),
+      isRead: false,
+    };
+
+    await setDoc(doc(db, NOTIFICATIONS, notificationId), {
+      ...notification,
+      timestamp: serverTimestamp(),
+    });
+    sentCount += 1;
+  }
+
+  return sentCount;
 }
 
 export function onAnnouncementsSnapshot(

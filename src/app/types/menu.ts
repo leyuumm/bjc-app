@@ -22,6 +22,9 @@ interface BaseProduct {
   basePrice: number;
   image: string;
   isPremium: boolean;
+  isBestSeller: boolean;
+  isFanFave: boolean;
+  isTrending: boolean;
   priceBySizeOz?: Partial<Record<SizeOz, number>>;
   defaultToppingsLabel?: string;
   defaultToppingsCost?: number;
@@ -59,6 +62,9 @@ export interface CartItem {
   basePrice: number;
   quantity: number;
   isPremium: boolean;
+  isBestSeller?: boolean;
+  isFanFave?: boolean;
+  isTrending?: boolean;
   selectedSizeOz?: SizeOz;
   selectedDrinkType?: LehMuhnDrinkType;
   selectedMenuGroup?: KohFeeMenuGroup;

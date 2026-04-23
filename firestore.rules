@@ -57,6 +57,59 @@ service cloud.firestore {
       return status in ['Pending', 'Preparing', 'Ready', 'Completed', 'Cancelled'];
     }
 
+    function isValidStoreId(storeId) {
+      return storeId in ['lehmuhn', 'kohfee'];
+    }
+
+    function isPositiveNumber(value) {
+      return value is number && value > 0;
+    }
+
+    function isValidProductDoc(productId) {
+      let data = request.resource.data;
+      let meta = data.meta;
+      let priceBySizeOz = meta.priceBySizeOz;
+      let normalizedCategoryId = data.categoryId.lower();
+      let isKohfeeFood = data.storeId == 'kohfee' && (normalizedCategoryId == 'kf-food' || normalizedCategoryId == 'food');
+
+      return (
+        data.productId == productId &&
+        ('storeId' in data) &&
+        isValidStoreId(data.storeId) &&
+        ('productName' in data) &&
+        data.productName is string &&
+        data.productName.size() >= 2 &&
+        ('categoryId' in data) &&
+        data.categoryId is string &&
+        data.categoryId.size() > 0 &&
+        ('imageUrl' in data) &&
+        data.imageUrl is string &&
+        data.imageUrl.size() > 0 &&
+        ('price' in data) &&
+        isPositiveNumber(data.price) &&
+        ('isAvailable' in data) &&
+        data.isAvailable is bool &&
+        ('meta' in data) &&
+        meta is map &&
+        (
+          isKohfeeFood ||
+          (
+            ('priceBySizeOz' in meta) &&
+            priceBySizeOz is map &&
+            ('16' in priceBySizeOz) &&
+            isPositiveNumber(priceBySizeOz['16']) &&
+            (
+              !('22' in priceBySizeOz) ||
+              (
+                isPositiveNumber(priceBySizeOz['22']) &&
+                priceBySizeOz['22'] >= priceBySizeOz['16']
+              )
+            )
+          )
+        )
+      );
+    }
+
     // ─── Users ──────────────────────────────────────────────────────
     // Users can read/write their own profile. Admins can read all.
     // Self-escalation (role/assignments) is blocked.
@@ -97,7 +150,9 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create: if isAdmin() && isValidProductDoc(productId);
+      allow update: if isAdmin() && isValidProductDoc(productId);
+      allow delete: if isAdmin();
     }
 
     // ─── Orders ─────────────────────────────────────────────────────

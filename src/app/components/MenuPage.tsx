@@ -19,44 +19,99 @@ import type { ProductDoc } from '../types/firestore';
 import { getPriceForSize } from './data';
 import { onProductsSnapshot } from '../services/firestore';
 import { cn } from './ui/utils';
+import { toast } from 'sonner';
+
+function normalizeCategoryId(categoryId?: string): string {
+  return (categoryId ?? '').trim().toLowerCase();
+}
+
+function mapCategoryToLehmuhnTypes(categoryId?: string): LehMuhnDrinkType[] | undefined {
+  const normalized = normalizeCategoryId(categoryId);
+  if (normalized === 'hot') return ['HOT'];
+  if (normalized === 'cold') return ['COLD'];
+  if (normalized === 'hot-cold' || normalized === 'hot_cold' || normalized === 'hotandcold') {
+    return ['HOT', 'COLD'];
+  }
+  return undefined;
+}
+
+function mapCategoryToKohfeeGroups(categoryId?: string): KohFeeMenuGroup[] | undefined {
+  const normalized = normalizeCategoryId(categoryId);
+  if (normalized === 'kf-hot' || normalized === 'hot') return ['HOT'];
+  if (normalized === 'kf-cold' || normalized === 'cold') return ['COLD'];
+  if (normalized === 'hot-cold' || normalized === 'hot_cold' || normalized === 'hotandcold') {
+    return ['HOT', 'COLD'];
+  }
+  return undefined;
+}
 
 function mapProductDocToProduct(doc: ProductDoc): Product {
   const meta = (doc.meta ?? {}) as Record<string, unknown>;
+  const priceBySizeOz = (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined;
+  const isBestSeller = (meta.isBestSeller as boolean) ?? (meta.isPremium as boolean) ?? false;
+  const isFanFave = (meta.isFanFave as boolean) ?? false;
+  const isTrending = (meta.isTrending as boolean) ?? false;
+  const normalizedBasePrice = priceBySizeOz?.[16] ?? doc.price;
 
   if (doc.storeId === 'lehmuhn') {
+    const categoryDrinkTypes = mapCategoryToLehmuhnTypes(doc.categoryId);
+    const allowedDrinkTypes = (meta.allowedDrinkTypes as LehMuhnDrinkType[]) ?? categoryDrinkTypes ?? undefined;
+    const drinkType = (meta.drinkType as LehMuhnDrinkType) ?? allowedDrinkTypes?.[0] ?? 'COLD';
+
     return {
       id: doc.productId,
       storeId: 'lehmuhn',
       name: doc.productName,
       description: (meta.description as string) ?? '',
-      basePrice: doc.price,
+      basePrice: normalizedBasePrice,
       image: doc.imageUrl,
-      isPremium: (meta.isPremium as boolean) ?? false,
-      priceBySizeOz: (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined,
+      isPremium: isBestSeller,
+      isBestSeller,
+      isFanFave,
+      isTrending,
+      priceBySizeOz,
       defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
       defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
-      drinkType: (meta.drinkType as LehMuhnDrinkType) ?? 'COLD',
-      allowedDrinkTypes: (meta.allowedDrinkTypes as LehMuhnDrinkType[]) ?? undefined,
+      drinkType,
+      allowedDrinkTypes,
       hotOptions: (meta.hotOptions as string[]) ?? undefined,
       requiresFruitSelection: (meta.requiresFruitSelection as { min: number; max: number; options: string[] }) ?? undefined,
     } satisfies LehmuhnProduct;
   }
+  const categoryMenuGroups = mapCategoryToKohfeeGroups(doc.categoryId);
+  const allowedMenuGroups = (meta.allowedMenuGroups as KohFeeMenuGroup[]) ?? categoryMenuGroups ?? undefined;
+  const menuGroup = (meta.menuGroup as KohFeeMenuGroup) ?? allowedMenuGroups?.[0] ?? 'HOT';
   return {
     id: doc.productId,
     storeId: 'kohfee',
     name: doc.productName,
     description: (meta.description as string) ?? '',
-    basePrice: doc.price,
+    basePrice: normalizedBasePrice,
     image: doc.imageUrl,
-    isPremium: (meta.isPremium as boolean) ?? false,
-    priceBySizeOz: (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined,
+    isPremium: isBestSeller,
+    isBestSeller,
+    isFanFave,
+    isTrending,
+    priceBySizeOz,
     defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
     defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
-    menuGroup: (meta.menuGroup as KohFeeMenuGroup) ?? 'HOT',
+    menuGroup,
     subGroup: (meta.subGroup as KohFeeSubGroup) ?? undefined,
     isFood: (meta.isFood as boolean) ?? false,
-    allowedMenuGroups: (meta.allowedMenuGroups as KohFeeMenuGroup[]) ?? undefined,
+    allowedMenuGroups,
   } satisfies KohfeeProduct;
+}
+
+function getDisplayPriceLabel(product: Product): string {
+  const grandePrice = product.priceBySizeOz?.[16];
+  const extraGrandePrice = product.priceBySizeOz?.[22];
+  if (grandePrice && extraGrandePrice) {
+    return `${grandePrice}-${extraGrandePrice}`;
+  }
+  if (grandePrice) {
+    return String(grandePrice);
+  }
+  return String(product.basePrice);
 }
 
 const LEHMUHN_TABS: LehMuhnDrinkType[] = ['HOT', 'COLD', 'BLENDED', 'SPARKLING'];
@@ -218,17 +273,35 @@ export function MenuPage() {
               <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
             </div>
             <div className="p-3">
-              {product.isPremium && (
-                <div className="inline-flex items-center gap-1 bg-[#362415] text-white text-[10px] px-2 py-1 rounded-[10px] mb-2">
-                  <Sparkles size={11} />
-                  <span style={{ fontWeight: 600 }}>Premium</span>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-1 mb-2">
+                {product.isBestSeller && (
+                  <div className="inline-flex items-center gap-1 bg-[#362415] text-white text-[10px] px-2 py-1 rounded-[10px]">
+                    <Sparkles size={11} />
+                    <span style={{ fontWeight: 600 }}>Best Seller</span>
+                  </div>
+                )}
+                {product.isFanFave && (
+                  <div className="inline-flex items-center bg-[#EDE9FE] text-[#6D28D9] text-[10px] px-2 py-1 rounded-[10px]">
+                    <span style={{ fontWeight: 700 }}>Fan Fave</span>
+                  </div>
+                )}
+                {product.isTrending && (
+                  <div className="inline-flex items-center bg-[#FFF7ED] text-[#C2410C] text-[10px] px-2 py-1 rounded-[10px]">
+                    <span style={{ fontWeight: 700 }}>Trending</span>
+                  </div>
+                )}
+              </div>
               <h3 className="text-[14px] text-[#362415] line-clamp-1" style={{ fontWeight: 600 }}>{product.name}</h3>
+              {((product.storeId === 'lehmuhn' && (product.allowedDrinkTypes ?? [product.drinkType]).includes('HOT') && (product.allowedDrinkTypes ?? [product.drinkType]).includes('COLD'))
+                || (product.storeId === 'kohfee' && (product.allowedMenuGroups ?? [product.menuGroup]).includes('HOT') && (product.allowedMenuGroups ?? [product.menuGroup]).includes('COLD'))) && (
+                <p className="text-[10px] text-[#00704A] mt-0.5" style={{ fontWeight: 700 }}>
+                  HOT &amp; COLD
+                </p>
+              )}
               <p className="text-[12px] text-[#757575] mt-0.5 line-clamp-1">{product.description}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-[15px] text-[#00704A]" style={{ fontWeight: 700 }}>
-                  &#8369;{product.basePrice}
+                  &#8369;{getDisplayPriceLabel(product)}
                 </span>
                 <div className="w-8 h-8 rounded-full bg-[#00704A] flex items-center justify-center">
                   <Plus size={16} color="white" />
@@ -329,7 +402,28 @@ function ProductDetailSheet({
   };
 
   const handleAdd = () => {
+    if (quantity < 1) {
+      toast.error('Quantity must be at least 1');
+      return;
+    }
+    if (allowedSizes.length > 0 && !sizeOz) {
+      toast.error('Please select a size');
+      return;
+    }
+    if (allowedSizes.length > 0 && sizeOz && !allowedSizes.includes(sizeOz)) {
+      toast.error('Selected size is not available for this item');
+      return;
+    }
+    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+      toast.error('Product price is not configured correctly');
+      return;
+    }
+    if (isLehmuhn && product.hotOptions && product.hotOptions.length > 0 && !hotOption) {
+      toast.error('Please choose a hot option');
+      return;
+    }
     if (!fruitRequirementMet) {
+      toast.error(`Please select exactly ${fruitRule?.min ?? 0} fruit(s)`);
       return;
     }
 
@@ -353,7 +447,10 @@ function ProductDetailSheet({
       image: product.image,
       basePrice,
       quantity,
-      isPremium: product.isPremium,
+      isPremium: product.isBestSeller,
+      isBestSeller: product.isBestSeller,
+      isFanFave: product.isFanFave,
+      isTrending: product.isTrending,
       selectedSizeOz: sizeOz,
       selectedDrinkType: isLehmuhn ? selectedType : undefined,
       selectedMenuGroup: !isLehmuhn ? selectedGroup : undefined,
@@ -365,6 +462,7 @@ function ProductDetailSheet({
       selectedHotOption: hotOption || undefined,
       selectedFruits: selectedFruits.length > 0 ? selectedFruits : undefined,
     });
+    toast.success('Added to cart');
     onClose();
   };
 
