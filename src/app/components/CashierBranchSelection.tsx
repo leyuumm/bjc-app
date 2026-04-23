@@ -197,8 +197,8 @@ export function CashierBranchSelection() {
           >
             <ArrowLeft size={22} />
           </button>
-          <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Select Cashier Branch</h1>
-          <p className="text-[13px] text-[#757575] mt-0.5">Choose where this cashier session will receive orders.</p>
+          <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Select Branch</h1>
+          <p className="text-[13px] text-[#757575] mt-0.5">Choose your branch to receive orders.</p>
         </div>
 
         <button
@@ -210,17 +210,6 @@ export function CashierBranchSelection() {
           Sign Out
         </button>
       </div>
-
-      {(assignedBranchId || assignedBranchIds.length > 0) && (
-        <div className="mb-4 rounded-[12px] border border-[#81C784] bg-[#E8F5E9] px-3 py-2.5">
-          <p className="text-[13px] text-[#2E7D32]" style={{ fontWeight: 600 }}>
-            Admin assigned this cashier account to your allowed branch/location.
-          </p>
-          <p className="text-[12px] text-[#2E7D32] mt-0.5">
-            Select your active branch and store before receiving realtime orders.
-          </p>
-        </div>
-      )}
 
       <div className="flex items-center bg-[#F5F5F5] rounded-[12px] px-4 py-3 mb-4">
         <Search size={18} color="#757575" className="mr-3" />
