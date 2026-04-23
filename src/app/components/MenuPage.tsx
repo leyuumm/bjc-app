@@ -37,6 +37,7 @@ function mapCategoryToLehmuhnTypes(categoryId?: string): LehMuhnDrinkType[] | un
 
 function mapCategoryToKohfeeGroups(categoryId?: string): KohFeeMenuGroup[] | undefined {
   const normalized = normalizeCategoryId(categoryId);
+  if (normalized === 'kf-food' || normalized === 'food') return ['FOOD'];
   if (normalized === 'kf-hot' || normalized === 'hot') return ['HOT'];
   if (normalized === 'kf-cold' || normalized === 'cold') return ['COLD'];
   if (normalized === 'hot-cold' || normalized === 'hot_cold' || normalized === 'hotandcold') {
@@ -153,6 +154,12 @@ export function MenuPage() {
     }
 
     if (activeKohfeeGroup === 'FOOD') {
+      return true;
+    }
+
+    // Backward compatible fallback:
+    // newly created products may not have subGroup yet, so keep them visible.
+    if (!product.subGroup) {
       return true;
     }
 

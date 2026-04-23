@@ -26,7 +26,7 @@ export const MENU_SIZE_RULES: {
     COLD: [16, 22],
     HOT: [16, 22],
     BLENDED: [16, 22],
-    FOOD: [16, 22],
+    FOOD: [],
   },
 };
 

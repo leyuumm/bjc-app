@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, BellOff, Check, Megaphone } from 'lucide-react';
+import { X, BellOff, Check, Megaphone, AlertTriangle } from 'lucide-react';
 import { useAppContext } from './AppContext';
 import { markNotificationAsRead } from '../services/firestore';
 
@@ -113,9 +113,10 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: i * 0.03 }}
-                            className="px-4 py-3.5 bg-[#FFF8E1]/60"
+                            className="w-full px-4 py-3.5 text-left bg-[#FFF8E1]/60"
                           >
                             <div className="flex items-start gap-3">
+                              <div className="mt-0.5 w-2.5 h-2.5 rounded-full shrink-0 bg-[#F59E0B]" />
                               {ann.imageUrl ? (
                                 <div className="w-10 h-10 rounded-[8px] overflow-hidden shrink-0 border border-[rgba(0,0,0,0.06)]">
                                   <img src={ann.imageUrl} alt={ann.title} className="w-full h-full object-cover" />
@@ -136,6 +137,7 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
                                   {formatTimestamp(ann.timestamp)}
                                 </p>
                               </div>
+                              <AlertTriangle size={14} color="#F59E0B" className="shrink-0 mt-1" />
                             </div>
                           </motion.div>
                         ))}

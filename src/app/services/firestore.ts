@@ -322,7 +322,7 @@ export function onProductsSnapshot(
 // ─── Product CRUD ──────────────────────────────────────────────────
 
 export async function addProduct(data: Omit<ProductDoc, 'productId'>): Promise<ProductDoc> {
-  const productId = `prod-${Date.now()}`;
+  const productId = doc(collection(db, PRODUCTS)).id;
   const product: ProductDoc = { productId, ...data };
   await setDoc(doc(db, PRODUCTS, productId), product);
   return product;

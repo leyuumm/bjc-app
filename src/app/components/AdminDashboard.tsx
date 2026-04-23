@@ -40,6 +40,15 @@ function isKohfeeFoodCategory(storeId: string, categoryId?: string): boolean {
   return storeId === 'kohfee' && (normalized === 'kf-food' || normalized === 'food');
 }
 
+function mapKohfeeCategoryToMenuGroups(categoryId?: string): Array<'HOT' | 'COLD' | 'FOOD'> | undefined {
+  const normalized = (categoryId ?? '').trim().toLowerCase();
+  if (normalized === 'kf-food' || normalized === 'food') return ['FOOD'];
+  if (normalized === 'kf-hot' || normalized === 'hot') return ['HOT'];
+  if (normalized === 'kf-cold' || normalized === 'cold') return ['COLD'];
+  if (normalized === 'hot-cold' || normalized === 'hot_cold' || normalized === 'hotandcold') return ['HOT', 'COLD'];
+  return undefined;
+}
+
 export function AdminDashboard() {
   const navigate = useNavigate();
   const { userProfile, authLoading } = useAppContext();
@@ -95,7 +104,7 @@ export function AdminDashboard() {
   const filtered = products.filter(p =>
     p.productName.toLowerCase().includes(search.toLowerCase()),
   );
-  const isFoodPricingMode = isKohfeeFoodCategory(form.storeId, form.categoryId);
+  const isFoodPricingMode = isKohfeeFoodCategory(activeStore, form.categoryId);
   const hasRequiredFields = Boolean(
     form.productName.trim() &&
     form.imageUrl.trim() &&
@@ -172,7 +181,8 @@ export function AdminDashboard() {
         // Keep legacy key in sync with Best Seller for older readers.
         isPremium: metaIsBestSeller,
       };
-      const isFood = isKohfeeFoodCategory(form.storeId, trimmedCategoryId);
+      const targetStoreId = activeStore;
+      const isFood = isKohfeeFoodCategory(targetStoreId, trimmedCategoryId);
       const parsedFixedPrice = Number(form.price);
       const parsedGrande = Number(lehmuhnGrandePrice);
       const parsedExtraGrande = Number(lehmuhnExtraGrandePrice);
@@ -218,13 +228,20 @@ export function AdminDashboard() {
       } = baseMeta as Record<string, unknown>;
       const meta = {
         ...restMeta,
+        ...(targetStoreId === 'kohfee' ? (() => {
+          const inferredGroups = mapKohfeeCategoryToMenuGroups(trimmedCategoryId);
+          return {
+            ...(inferredGroups ? { allowedMenuGroups: inferredGroups, menuGroup: inferredGroups[0] } : {}),
+            isFood,
+          };
+        })() : {}),
         ...(Object.keys(normalizedSizePrices).length > 0 ? { priceBySizeOz: normalizedSizePrices } : {}),
       };
       const normalizedBasePrice = isFood ? parsedFixedPrice : parsedGrande;
 
       if (editingProduct) {
         await updateProduct(editingProduct.productId, {
-          storeId: form.storeId,
+          storeId: targetStoreId,
           productName: trimmedProductName,
           price: normalizedBasePrice,
           categoryId: trimmedCategoryId,
@@ -235,7 +252,7 @@ export function AdminDashboard() {
         toast.success('Product updated successfully');
       } else {
         const newProduct = await addProduct({
-          storeId: form.storeId,
+          storeId: targetStoreId,
           productName: trimmedProductName,
           price: normalizedBasePrice,
           categoryId: trimmedCategoryId,
@@ -244,11 +261,11 @@ export function AdminDashboard() {
           meta,
         });
         if (notifyUsers) {
-          const storeName = form.storeId === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee';
+          const storeName = targetStoreId === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee';
           const announcementTitle = `New item at ${storeName}!`;
           const announcementMessage = `${trimmedProductName} is now available. Check it out!`;
           await createAnnouncement({
-            storeId: form.storeId,
+            storeId: targetStoreId,
             title: announcementTitle,
             message: announcementMessage,
             imageUrl: trimmedImageUrl || undefined,
@@ -492,21 +509,10 @@ export function AdminDashboard() {
 
                   <div>
                     <label className="text-[12px] text-[#757575] mb-1 block">Store</label>
-                    <div className="flex gap-2">
-                      {(['lehmuhn', 'kohfee'] as StoreId[]).map(store => (
-                        <button
-                          key={store}
-                          onClick={() => setForm(f => ({ ...f, storeId: store }))}
-                          className={`flex-1 py-2.5 rounded-[12px] text-[13px] cursor-pointer border transition-all ${
-                            form.storeId === store
-                              ? 'bg-[#00704A] text-white border-[#00704A]'
-                              : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]'
-                          }`}
-                          style={{ fontWeight: form.storeId === store ? 600 : 400 }}
-                        >
-                          {store === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee'}
-                        </button>
-                      ))}
+                    <div className="w-full py-2.5 rounded-[12px] text-[13px] border bg-[#F5F5F5] text-[#362415] px-4">
+                      <span style={{ fontWeight: 600 }}>
+                        {activeStore === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee'}
+                      </span>
                     </div>
                   </div>
 
