@@ -57,14 +57,14 @@ export async function seedFirestore() {
   // ─── Stores ──────────────────────────────────────────────────────
   await seedDocument('stores', 'lehmuhn', {
     storeId: 'lehmuhn',
-    storeName: "Leh'-muhn",
+    storeName: 'the leh-muhn',
     storeDescription: 'Fresh lemon-based beverages',
     logoURL: '/beyond-jc-group-opc-logo.svg',
   });
 
   await seedDocument('stores', 'kohfee', {
     storeId: 'kohfee',
-    storeName: 'Kohfee',
+    storeName: 'the koh-fee',
     storeDescription: 'Premium coffee blends',
     logoURL: '/beyond-jc-group-opc-logo.svg',
   });

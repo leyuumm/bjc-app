@@ -28,10 +28,10 @@ export const IMAGES = {
 // ─── BRANCHES ────────────────────────────────────────────────────────────────
 
 export const branches: Branch[] = [
-  // The Leh-muhn Juices & Tea branches
+  // The leh-muhn Juices & Tea branches
   {
     id: '1',
-    name: 'Leh-Muhn Catmon Uno',
+    name: 'leh-muhn Catmon Uno',
     address: 'Provincial Road, Sac-sac, Duyan, Catmon, Cebu',
     hours: '6:00 AM - 9:00 PM',
     available: true,
@@ -40,7 +40,7 @@ export const branches: Branch[] = [
   },
   {
     id: '2',
-    name: 'Leh-Muhn Catmon Dos',
+    name: 'leh-muhn Catmon Dos',
     address: 'National Hi-way, Sitio Giwanon, Macaas, Catmon, Cebu near Bibingkahan',
     hours: '6:00 AM - 9:00 PM',
     available: true,
@@ -49,17 +49,17 @@ export const branches: Branch[] = [
   },
   {
     id: '3',
-    name: 'Leh-Muhn Cebu City Uno',
+    name: 'leh-muhn Cebu City Uno',
     address: 'Pardo, Cebu City',
     hours: '10:00 AM - 11:00 PM',
     available: false,
     brand: 'lehmuhn',
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/viber_image_2024-11-01_19-41-57-973.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:776,h:776,cg:true',
   },
-  // The Koh-fee branches
+  // The koh-fee branches
   {
     id: '4',
-    name: 'Koh-Fee Catmon Uno',
+    name: 'koh-fee Catmon Uno',
     address: 'Sitio Sak-sak, Duyan, Catmon, Cebu',
     hours: '6:00 AM - 9:00 PM',
     available: true,
@@ -68,7 +68,7 @@ export const branches: Branch[] = [
   },
   {
     id: '5',
-    name: 'Koh-Fee Catmon Dos',
+    name: 'koh-fee Catmon Dos',
     address: 'Sitio Giwanon, Mac-as, Catmon, Cebu near Bingkahan',
     hours: '6:00 AM - 9:00 PM',
     available: true,
@@ -77,7 +77,7 @@ export const branches: Branch[] = [
   },
   {
     id: '6',
-    name: 'Koh-Fee Cebu City Uno',
+    name: 'koh-fee Cebu City Uno',
     address: 'Pardo, Cebu City',
     hours: '6:00 AM - 9:00 PM',
     available: true,
@@ -93,11 +93,11 @@ export const products: Product[] = [
   // THE LEH-MUHN JUICES & TEA
   // ═══════════════════════════════════════════════════════════════════════════
 
-  // ── Iced Classic & Zesty Leh-Muhnade ───────────────────────────────────────
+  // ── Iced Classic & Zesty leh-muhnade ───────────────────────────────────────
   {
     id: 'lm-just-lehmuhn',
     storeId: 'lehmuhn',
-    name: 'Iced Just Classic Zesty Leh-Muhnade',
+    name: 'Iced Just Classic Zesty leh-muhnade',
     description: 'Just freshly squeezed pure lemon. No add ons except sugar.',
     basePrice: 69,
     priceBySizeOz: { 16: 69, 22: 89 },
@@ -108,7 +108,7 @@ export const products: Product[] = [
   {
     id: 'lm-classic-jelly-chia',
     storeId: 'lehmuhn',
-    name: 'Iced Classic Zesty Jelly Chia Leh-Muhnade',
+    name: 'Iced Classic Zesty Jelly Chia leh-muhnade',
     description: 'No flavor, just lemon with chia and nata de coco.',
     basePrice: 79,
     priceBySizeOz: { 16: 79, 22: 99 },
@@ -119,11 +119,11 @@ export const products: Product[] = [
     defaultToppingsCost: 15,
   },
 
-  // ── Hot & Zesty Leh-Muhnade ────────────────────────────────────────────────
+  // ── Hot & Zesty leh-muhnade ────────────────────────────────────────────────
   {
     id: 'lm-hot-lehmuhn',
     storeId: 'lehmuhn',
-    name: 'Hot Leh-Muhn',
+    name: 'Hot leh-muhn',
     description: 'Honey, ginger, pure lemon, and lemongrass.',
     basePrice: 89,
     priceBySizeOz: { 12: 89 },
@@ -133,11 +133,11 @@ export const products: Product[] = [
     isPremium: false,
   },
 
-  // ── Iced Premium Leh-Muhn ──────────────────────────────────────────────────
+  // ── Iced Premium leh-muhn ──────────────────────────────────────────────────
   {
     id: 'lm-premium-zesty',
     storeId: 'lehmuhn',
-    name: 'Iced Premium Zesty Leh-Muhnade',
+    name: 'Iced Premium Zesty leh-muhnade',
     description: 'Choice of flavors like strawberry, lychee, green apple, yakult, watermelon, orange, mango, lemongrass, mango-strawberry, passion fruit with lemon, chia, and nata de coco.',
     basePrice: 99,
     priceBySizeOz: { 16: 99, 22: 119 },
@@ -150,7 +150,7 @@ export const products: Product[] = [
   {
     id: 'lm-extra-cucumber',
     storeId: 'lehmuhn',
-    name: 'Iced Extra Cucumber Premium Leh-Muhnade',
+    name: 'Iced Extra Cucumber Premium leh-muhnade',
     description: 'Blended cucumber, lemon, chia, and nata de coco.',
     basePrice: 109,
     priceBySizeOz: { 16: 109, 22: 129 },
@@ -165,7 +165,7 @@ export const products: Product[] = [
   {
     id: 'lm-banana-berries',
     storeId: 'lehmuhn',
-    name: 'Banana Leh-Muhn Berries Smoothie',
+    name: 'Banana leh-muhn Berries Smoothie',
     description: 'Banana, mixed berries and lemon.',
     basePrice: 129,
     priceBySizeOz: { 16: 129 },
@@ -176,7 +176,7 @@ export const products: Product[] = [
   {
     id: 'lm-berries-frappe',
     storeId: 'lehmuhn',
-    name: 'Leh-Muhn Berries Frappe',
+    name: 'leh-muhn Berries Frappe',
     description: 'Mixed berries and lemon.',
     basePrice: 135,
     priceBySizeOz: { 16: 135 },
@@ -187,7 +187,7 @@ export const products: Product[] = [
   {
     id: 'lm-mango-berries',
     storeId: 'lehmuhn',
-    name: 'Mango Leh-Muhn Berries Smoothie',
+    name: 'Mango leh-muhn Berries Smoothie',
     description: 'Mango, mixed berries, and lemon.',
     basePrice: 129,
     priceBySizeOz: { 16: 129 },
@@ -198,7 +198,7 @@ export const products: Product[] = [
   {
     id: 'lm-raspberry-frappe',
     storeId: 'lehmuhn',
-    name: 'Raspberry Leh-Muhn Frappe',
+    name: 'Raspberry leh-muhn Frappe',
     description: 'Raspberry and lemon.',
     basePrice: 135,
     priceBySizeOz: { 16: 135 },
@@ -209,7 +209,7 @@ export const products: Product[] = [
   {
     id: 'lm-strawberry-frappe',
     storeId: 'lehmuhn',
-    name: 'Strawberry Leh-Muhn Frappe',
+    name: 'Strawberry leh-muhn Frappe',
     description: 'Strawberry and lemon.',
     basePrice: 135,
     priceBySizeOz: { 16: 135 },
@@ -218,11 +218,11 @@ export const products: Product[] = [
     isPremium: false,
   },
 
-  // ── Sparkling Leh-Muhn Series ──────────────────────────────────────────────
+  // ── Sparkling leh-muhn Series ──────────────────────────────────────────────
   {
     id: 'lm-zesty-sparkling',
     storeId: 'lehmuhn',
-    name: 'Zesty Sparkling Leh-Muhn',
+    name: 'Zesty Sparkling leh-muhn',
     description: 'Available for all flavors.',
     basePrice: 89,
     priceBySizeOz: { 16: 89, 22: 109 },
@@ -233,7 +233,7 @@ export const products: Product[] = [
   {
     id: 'lm-sparkling-matcha',
     storeId: 'lehmuhn',
-    name: 'Sparkling Leh-Muhn Matcha',
+    name: 'Sparkling leh-muhn Matcha',
     description: 'Matcha flavor sparkling lemon. Lemon + sparkling + matcha.',
     basePrice: 109,
     priceBySizeOz: { 16: 109, 22: 129 },
@@ -244,7 +244,7 @@ export const products: Product[] = [
   {
     id: 'lm-sparkling-icecream',
     storeId: 'lehmuhn',
-    name: 'Sparkling Leh-Muhn Vanilla Ice Cream',
+    name: 'Sparkling leh-muhn Vanilla Ice Cream',
     description: 'Any flavors with ice cream on top.',
     basePrice: 129,
     priceBySizeOz: { 16: 129, 22: 149 },
@@ -253,7 +253,7 @@ export const products: Product[] = [
     isPremium: false,
   },
 
-  // ── Carrot & Leh-Muhn Fresh Juices ─────────────────────────────────────────
+  // ── Carrot & leh-muhn Fresh Juices ─────────────────────────────────────────
   {
     id: 'lm-carrot-fresh-juice',
     storeId: 'lehmuhn',
@@ -344,7 +344,7 @@ export const products: Product[] = [
   {
     id: 'kf-ice-cream-kohfee',
     storeId: 'kohfee',
-    name: 'Ice Cream Koh-Fee',
+    name: 'Ice Cream koh-fee',
     description: 'White chocolate mocha with ice cream on top.',
     basePrice: 149,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/blob-16ca884.png/:/cr=t:0%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -357,7 +357,7 @@ export const products: Product[] = [
   {
     id: 'kf-americano',
     storeId: 'kohfee',
-    name: 'Koh-Fee Americano',
+    name: 'koh-fee Americano',
     description: 'The taste of premium espresso coffee.',
     basePrice: 99,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/viber_image_2024-06-22_21-09-09-724.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -370,7 +370,7 @@ export const products: Product[] = [
   {
     id: 'kf-latte-cinnamon',
     storeId: 'kohfee',
-    name: 'Koh-Fee Latte with Cinnamon',
+    name: 'koh-fee Latte with Cinnamon',
     description: 'Premium coffee and choice of dairy or non-dairy milk.',
     basePrice: 119,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/0-02-06-08a548953aea882ad592adb3d58d059f2dbd4d.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -383,7 +383,7 @@ export const products: Product[] = [
   {
     id: 'kf-kohfee-matcha',
     storeId: 'kohfee',
-    name: 'Koh-Fee Matcha',
+    name: 'koh-fee Matcha',
     description: 'Premium coffee and matcha in one cup.',
     basePrice: 129,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/0-02-06-ca0456867981dce7213d2745a6b3e81559c148.jpg/:/cr=t:5.65%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -396,7 +396,7 @@ export const products: Product[] = [
   {
     id: 'kf-milky-strawberry-latte',
     storeId: 'kohfee',
-    name: 'Milky Strawberry Koh-Fee Latte',
+    name: 'Milky Strawberry koh-fee Latte',
     description: 'Premium coffee, milk, and strawberry.',
     basePrice: 139,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/0-02-06-7f40f3f5bce42ffcafaaeccf0b08caff76dec0.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -409,7 +409,7 @@ export const products: Product[] = [
   {
     id: 'kf-orange-kohfee',
     storeId: 'kohfee',
-    name: 'Orange Koh-Fee',
+    name: 'Orange koh-fee',
     description: 'Premium black coffee is also best with orange. Perfect blend and perfect taste.',
     basePrice: 109,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/blob-ca29a9e.png/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -435,7 +435,7 @@ export const products: Product[] = [
   {
     id: 'kf-ube-latte',
     storeId: 'kohfee',
-    name: 'Ube-Koh-Fee Latte',
+    name: 'Ube-koh-fee Latte',
     description: 'A blend of ube, milk, and coffee.',
     basePrice: 129,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/blob-fe53c45.png/:/cr=t:18.04%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -448,7 +448,7 @@ export const products: Product[] = [
   {
     id: 'kf-vietnamese-egg',
     storeId: 'kohfee',
-    name: 'Vietnamese Egg Koh-Fee with Cinnamon',
+    name: 'Vietnamese Egg koh-fee with Cinnamon',
     description: 'Premium brewed coffee with condensed milk and egg yolk. Egg coffee is Vietnam\'s most tried coffee.',
     basePrice: 149,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/blob.png/:/cr=t:0%25,l:12.5%25,w:75%25,h:100%25/rs=w:720,h:720,cg:true',
@@ -461,7 +461,7 @@ export const products: Product[] = [
   {
     id: 'kf-vietnamese-kohfee',
     storeId: 'kohfee',
-    name: 'Vietnamese Koh-Fee with Cinnamon',
+    name: 'Vietnamese koh-fee with Cinnamon',
     description: 'Premium brewed coffee with condensed milk. Vietnamese style koh-fee.',
     basePrice: 129,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/viber_image_2024-06-24_07-30-20-958.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -474,7 +474,7 @@ export const products: Product[] = [
   {
     id: 'kf-watermelon-kohfee',
     storeId: 'kohfee',
-    name: 'Watermelon Koh-Fee',
+    name: 'Watermelon koh-fee',
     description: 'Premium black coffee is also best with watermelon. Perfect blend and perfect taste.',
     basePrice: 109,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/0-02-06-50a69a2f114d405038ad85f0cbba3f154b367c.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -526,7 +526,7 @@ export const products: Product[] = [
   {
     id: 'kf-caramel-frappe',
     storeId: 'kohfee',
-    name: 'Koh-Fee Caramel Frappe',
+    name: 'koh-fee Caramel Frappe',
     description: 'Premium coffee with caramel frappe.',
     basePrice: 139,
     image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/1000024705.jpg/:/cr=t:12.5%25,l:0%25,w:100%25,h:75%25/rs=w:720,h:720,cg:true',
@@ -935,7 +935,7 @@ const sampleOrderItem: CartItem = {
   cartItemId: 'sample-lm-just-16',
   productId: 'lm-just-lehmuhn',
   storeId: 'lehmuhn',
-  name: 'Iced Just Classic Zesty Leh-Muhnade',
+  name: 'Iced Just Classic Zesty leh-muhnade',
   description: 'Just freshly squeezed pure lemon. No add ons except sugar.',
   image: 'https://img1.wsimg.com/isteam/ip/c2bd527b-5ab9-45b8-826e-cfa648c84f37/Screenshot%202026-03-25%20at%201.45.07%E2%80%AFPM.png/:/cr=t:3.21%25,l:0%25,w:100%25,h:93.58%25/rs=w:720,h:720,cg:true',
   basePrice: 69,
@@ -988,7 +988,7 @@ export const sampleOrders: Order[] = [
   },
   {
     id: 'BJC-004',
-    items: [{ ...sampleOrderItem, cartItemId: 'sample-kf-4', storeId: 'kohfee', name: 'Koh-Fee Caramel Frappe', productId: 'kf-caramel-frappe', selectedMenuGroup: 'BLENDED', selectedSubGroup: 'COFFEE', selectedDrinkType: undefined, selectedSizeOz: 16, basePrice: 139, toppingsLabel: undefined, toppingsCost: 0 }],
+    items: [{ ...sampleOrderItem, cartItemId: 'sample-kf-4', storeId: 'kohfee', name: 'koh-fee Caramel Frappe', productId: 'kf-caramel-frappe', selectedMenuGroup: 'BLENDED', selectedSubGroup: 'COFFEE', selectedDrinkType: undefined, selectedSizeOz: 16, basePrice: 139, toppingsLabel: undefined, toppingsCost: 0 }],
     total: 139,
     status: 'completed',
     time: '9:15 AM',
