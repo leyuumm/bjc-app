@@ -114,7 +114,7 @@ export function AdminDashboard() {
           meta,
         });
         if (notifyUsers) {
-          const storeName = form.storeId === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee';
+          const storeName = form.storeId === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee';
           await createAnnouncement({
             storeId: form.storeId,
             title: `New item at ${storeName}!`,
@@ -179,7 +179,7 @@ export function AdminDashboard() {
             }`}
             style={{ fontWeight: activeStore === store ? 600 : 400 }}
           >
-            {store === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee'}
+            {store === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee'}
           </button>
         ))}
       </div>
@@ -373,7 +373,7 @@ export function AdminDashboard() {
                           }`}
                           style={{ fontWeight: form.storeId === store ? 600 : 400 }}
                         >
-                          {store === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee'}
+                          {store === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee'}
                         </button>
                       ))}
                     </div>

@@ -67,7 +67,7 @@ export function StoreSelection() {
         style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }}
       >
         <div className="h-[140px] relative">
-          <img src={IMAGES.shop} alt="Koh-fee" className="w-full h-full object-cover" />
+          <img src={IMAGES.shop} alt="the koh-fee" className="w-full h-full object-cover" />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' }} />
         </div>
         <div className="p-4 bg-white">
@@ -76,7 +76,7 @@ export function StoreSelection() {
               <Coffee size={24} color="#362415" />
             </div>
             <div>
-              <h2 className="text-[18px] text-[#362415]" style={{ fontWeight: 700 }}>Koh-fee</h2>
+              <h2 className="text-[18px] text-[#362415]" style={{ fontWeight: 700 }}>the koh-fee</h2>
               <p className="text-[13px] text-[#757575]">Specialty coffee & blends</p>
             </div>
           </div>

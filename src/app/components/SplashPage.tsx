@@ -33,7 +33,7 @@ export function SplashPage() {
           transition={{ delay: 0.5, duration: 0.5 }}
           className="text-white/50 text-[12px] mb-12 text-center"
         >
-          Leh-muhn Juices & Tea  &bull;  Koh-fee
+          the leh-muhn Juices & Tea  &bull;  the koh-fee
         </motion.p>
 
         <motion.button

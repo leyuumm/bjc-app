@@ -276,8 +276,8 @@ export function AdminOverview() {
 
           <div className="space-y-3 mt-3">
             {([
-              { id: 'lehmuhn' as StoreId, label: 'Leh-muhn' },
-              { id: 'kohfee' as StoreId, label: 'Koh-fee' },
+              { id: 'lehmuhn' as StoreId, label: 'the leh-muhn' },
+              { id: 'kohfee' as StoreId, label: 'the koh-fee' },
             ]).map((store) => {
               const topDrink = topSellers[store.id].drink;
               const topFood = topSellers[store.id].food;

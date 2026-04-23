@@ -67,7 +67,7 @@ export function CartPage() {
                   <div>
                     <h3 className="text-[15px] text-[#362415]" style={{ fontWeight: 600 }}>{item.name}</h3>
                     <p className="text-[12px] text-[#757575] mt-0.5">
-                      {item.storeId === 'lehmuhn' ? 'Leh-muhn' : 'Koh-fee'}
+                      {item.storeId === 'lehmuhn' ? 'the leh-muhn' : 'the koh-fee'}
                       {item.selectedDrinkType ? ` • ${item.selectedDrinkType}` : ''}
                       {item.selectedMenuGroup ? ` • ${item.selectedMenuGroup}` : ''}
                       {item.selectedSubGroup ? ` • ${item.selectedSubGroup === 'NON_COFFEE' ? 'NON-COFFEE' : item.selectedSubGroup}` : ''}

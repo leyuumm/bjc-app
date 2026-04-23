@@ -90,7 +90,7 @@ export function CashierDashboard() {
       setStoreLabel('');
       return;
     }
-    setStoreLabel(storeId === 'lehmuhn' ? 'Leh-muhn' : storeId === 'kohfee' ? 'Koh-fee' : storeId);
+    setStoreLabel(storeId === 'lehmuhn' ? 'the leh-muhn' : storeId === 'kohfee' ? 'the koh-fee' : storeId);
   }, [storeId]);
 
   useEffect(() => {

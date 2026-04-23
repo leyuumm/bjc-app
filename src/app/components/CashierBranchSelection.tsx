@@ -10,8 +10,8 @@ import type { BranchDoc } from '../types/firestore';
 import type { StoreId } from '../types/menu';
 
 const STORE_LABELS: Record<string, string> = {
-  lehmuhn: 'Leh-muhn',
-  kohfee: 'Koh-fee',
+  lehmuhn: 'the leh-muhn',
+  kohfee: 'the koh-fee',
 };
 
 function getLocationKey(branchName: string): string {

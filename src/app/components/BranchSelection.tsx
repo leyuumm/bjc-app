@@ -58,7 +58,7 @@ export function BranchSelection() {
         <div>
           <h1 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>Select Branch</h1>
           <p className="text-[13px] text-[#757575]">
-            {selectedBrand === 'lehmuhn' ? 'Leh-muhn Juices & Tea' : 'Koh-fee'}
+            {selectedBrand === 'lehmuhn' ? 'the leh-muhn Juices & Tea' : 'the koh-fee'}
           </p>
         </div>
       </div>
