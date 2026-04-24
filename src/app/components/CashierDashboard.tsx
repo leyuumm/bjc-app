@@ -263,6 +263,7 @@ export function CashierDashboard() {
                     <span className="text-[#362415]">
                       {item.quantity}x {item.name}
                       {item.selectedSizeOz ? ` (${SIZE_LABELS[item.selectedSizeOz]} ${item.selectedSizeOz}oz)` : ''}
+                      {item.selectedFoodPortion ? ` (${item.selectedFoodPortion === 'paraUno' ? 'Para Uno' : 'Para Amigos'})` : ''}
                     </span>
                   </div>
                 ))}

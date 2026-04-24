@@ -164,6 +164,7 @@ export function OrderTracking() {
             <span className="text-[#362415]">
               {item.quantity}x {item.name}
               {item.selectedSizeOz ? ` (${SIZE_LABELS[item.selectedSizeOz]} ${item.selectedSizeOz}oz)` : ''}
+              {item.selectedFoodPortion ? ` (${item.selectedFoodPortion === 'paraUno' ? 'Para Uno' : 'Para Amigos'})` : ''}
             </span>
             <span className="text-[#757575]" style={{ fontWeight: 500 }}>&#8369;{getCartItemLineTotal(item)}</span>
           </div>

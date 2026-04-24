@@ -56,6 +56,16 @@ export function CheckoutPage() {
         if (item.selectedSizeOz) {
           customizations.push({ optionId: `size-${item.selectedSizeOz}`, productId: item.productId, name: `Size ${item.selectedSizeOz}oz`, optionType: 'size', optionValue: String(item.selectedSizeOz), extraCost: 0 });
         }
+        if (item.selectedFoodPortion) {
+          customizations.push({
+            optionId: `portion-${item.selectedFoodPortion}`,
+            productId: item.productId,
+            name: item.selectedFoodPortion === 'paraUno' ? 'Para Uno' : 'Para Amigos',
+            optionType: 'portion',
+            optionValue: item.selectedFoodPortion,
+            extraCost: 0,
+          });
+        }
         if (item.toppingsRemoved) {
           customizations.push({ optionId: 'toppings-removed', productId: item.productId, name: 'Toppings Removed', optionType: 'toppingsRemoved', optionValue: 'true', extraCost: 0 });
         }

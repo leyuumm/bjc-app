@@ -35,6 +35,9 @@ export function mapOrderDocToOrder(d: OrderDoc): Order {
       selectedSizeOz: item.customizations.find(c => c.optionType === 'size')
         ? Number(item.customizations.find(c => c.optionType === 'size')!.optionValue) as CartItem['selectedSizeOz']
         : undefined,
+      selectedFoodPortion: item.customizations.find(c => c.optionType === 'portion')
+        ? item.customizations.find(c => c.optionType === 'portion')!.optionValue as CartItem['selectedFoodPortion']
+        : undefined,
       addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
         id: c.optionId,
         name: c.name,

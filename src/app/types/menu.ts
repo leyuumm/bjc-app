@@ -7,6 +7,7 @@ export type KohFeeMenuGroup = 'COLD' | 'HOT' | 'BLENDED' | 'FOOD';
 export type KohFeeSubGroup = 'COFFEE' | 'NON_COFFEE';
 
 export type SizeOz = 12 | 16 | 22;
+export type FoodPortionKey = 'paraUno' | 'paraAmigos';
 
 export interface AddOnOption {
   id: string;
@@ -26,6 +27,7 @@ interface BaseProduct {
   isFanFave: boolean;
   isTrending: boolean;
   priceBySizeOz?: Partial<Record<SizeOz, number>>;
+  priceByPortion?: Partial<Record<FoodPortionKey, number>>;
   defaultToppingsLabel?: string;
   defaultToppingsCost?: number;
 }
@@ -69,6 +71,7 @@ export interface CartItem {
   selectedDrinkType?: LehMuhnDrinkType;
   selectedMenuGroup?: KohFeeMenuGroup;
   selectedSubGroup?: KohFeeSubGroup;
+  selectedFoodPortion?: FoodPortionKey;
   addOns: AddOnOption[];
   toppingsRemoved: boolean;
   toppingsLabel?: string;

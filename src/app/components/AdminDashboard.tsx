@@ -69,6 +69,9 @@ export function AdminDashboard() {
   const [metaIsTrending, setMetaIsTrending] = useState(false);
   const [lehmuhnGrandePrice, setLehmuhnGrandePrice] = useState('');
   const [lehmuhnExtraGrandePrice, setLehmuhnExtraGrandePrice] = useState('');
+  const [foodPortionPricingEnabled, setFoodPortionPricingEnabled] = useState(false);
+  const [foodParaUnoPrice, setFoodParaUnoPrice] = useState('');
+  const [foodParaAmigosPrice, setFoodParaAmigosPrice] = useState('');
   const [notifyUsers, setNotifyUsers] = useState(false);
 
   const categoryOptions = React.useMemo(() => {
@@ -105,11 +108,14 @@ export function AdminDashboard() {
     p.productName.toLowerCase().includes(search.toLowerCase()),
   );
   const isFoodPricingMode = isKohfeeFoodCategory(activeStore, form.categoryId);
+  const isFoodPortionPricingMode = isFoodPricingMode && foodPortionPricingEnabled;
   const hasRequiredFields = Boolean(
     form.productName.trim() &&
     form.imageUrl.trim() &&
     (
-      isFoodPricingMode
+      isFoodPortionPricingMode
+        ? (foodParaUnoPrice.trim() && Number(foodParaUnoPrice) > 0)
+        : isFoodPricingMode
         ? Number.isFinite(Number(form.price)) && Number(form.price) > 0
         : (lehmuhnGrandePrice.trim() && Number(lehmuhnGrandePrice) > 0)
     ),
@@ -124,6 +130,9 @@ export function AdminDashboard() {
     setMetaIsTrending(false);
     setLehmuhnGrandePrice('');
     setLehmuhnExtraGrandePrice('');
+    setFoodPortionPricingEnabled(false);
+    setFoodParaUnoPrice('');
+    setFoodParaAmigosPrice('');
     setNotifyUsers(false);
     setShowForm(true);
   };
@@ -135,12 +144,17 @@ export function AdminDashboard() {
     setMetaDescription((meta.description as string) ?? '');
     const isBestSeller = (meta.isBestSeller as boolean) ?? (meta.isPremium as boolean) ?? false;
     const priceBySizeOz = (meta.priceBySizeOz as Partial<Record<number, number>> | undefined) ?? {};
+    const priceByPortion = (meta.priceByPortion as Partial<Record<'paraUno' | 'paraAmigos', number>> | undefined) ?? {};
     setMetaIsBestSeller(isBestSeller);
     setMetaIsFanFave((meta.isFanFave as boolean) ?? false);
     setMetaIsTrending((meta.isTrending as boolean) ?? false);
     const isFood = isKohfeeFoodCategory(product.storeId as StoreId, product.categoryId);
     setLehmuhnGrandePrice(isFood ? '' : String(priceBySizeOz[16] ?? product.price ?? ''));
     setLehmuhnExtraGrandePrice(isFood ? '' : String(priceBySizeOz[22] ?? ''));
+    const hasPortionPricing = isFood && (Number(priceByPortion.paraUno) > 0 || Number(priceByPortion.paraAmigos) > 0);
+    setFoodPortionPricingEnabled(hasPortionPricing);
+    setFoodParaUnoPrice(hasPortionPricing ? String(priceByPortion.paraUno ?? product.price ?? '') : '');
+    setFoodParaAmigosPrice(hasPortionPricing ? String(priceByPortion.paraAmigos ?? '') : '');
     setShowForm(true);
   };
 
@@ -186,10 +200,24 @@ export function AdminDashboard() {
       const parsedFixedPrice = Number(form.price);
       const parsedGrande = Number(lehmuhnGrandePrice);
       const parsedExtraGrande = Number(lehmuhnExtraGrandePrice);
+      const parsedParaUno = Number(foodParaUnoPrice);
+      const parsedParaAmigos = Number(foodParaAmigosPrice);
       const hasFixedPrice = Number.isFinite(parsedFixedPrice) && parsedFixedPrice > 0;
       const hasGrande = Number.isFinite(parsedGrande) && parsedGrande > 0;
       const hasExtraGrande = Number.isFinite(parsedExtraGrande) && parsedExtraGrande > 0;
-      if (isFood && !hasFixedPrice) {
+      const hasParaUno = Number.isFinite(parsedParaUno) && parsedParaUno > 0;
+      const hasParaAmigos = Number.isFinite(parsedParaAmigos) && parsedParaAmigos > 0;
+      if (isFood && foodPortionPricingEnabled && !hasParaUno) {
+        toast.error('Para Uno price is required when portion pricing is enabled');
+        setSaving(false);
+        return;
+      }
+      if (isFood && foodPortionPricingEnabled && hasParaAmigos && parsedParaAmigos < parsedParaUno) {
+        toast.error('Para Amigos price must be greater than or equal to Para Uno');
+        setSaving(false);
+        return;
+      }
+      if (isFood && !foodPortionPricingEnabled && !hasFixedPrice) {
         toast.error('Price is required for Food category');
         setSaving(false);
         return;
@@ -220,9 +248,24 @@ export function AdminDashboard() {
         setSaving(false);
         return;
       }
+      const currentPortionPrices = ((form.meta as Record<string, unknown> | undefined)?.priceByPortion as Partial<Record<'paraUno' | 'paraAmigos', number>> | undefined) ?? {};
+      const normalizedPortionPrices: Partial<Record<'paraUno' | 'paraAmigos', number>> = {
+        ...currentPortionPrices,
+      };
+      if (isFood && foodPortionPricingEnabled && hasParaUno) {
+        normalizedPortionPrices.paraUno = parsedParaUno;
+      } else {
+        delete normalizedPortionPrices.paraUno;
+      }
+      if (isFood && foodPortionPricingEnabled && hasParaAmigos) {
+        normalizedPortionPrices.paraAmigos = parsedParaAmigos;
+      } else {
+        delete normalizedPortionPrices.paraAmigos;
+      }
 
       const {
         priceBySizeOz: _ignoredPriceBySizeOz,
+        priceByPortion: _ignoredPriceByPortion,
         basePrice: _ignoredLegacyBasePrice,
         ...restMeta
       } = baseMeta as Record<string, unknown>;
@@ -236,8 +279,11 @@ export function AdminDashboard() {
           };
         })() : {}),
         ...(Object.keys(normalizedSizePrices).length > 0 ? { priceBySizeOz: normalizedSizePrices } : {}),
+        ...(Object.keys(normalizedPortionPrices).length > 0 ? { priceByPortion: normalizedPortionPrices } : {}),
       };
-      const normalizedBasePrice = isFood ? parsedFixedPrice : parsedGrande;
+      const normalizedBasePrice = isFood
+        ? (foodPortionPricingEnabled && hasParaUno ? parsedParaUno : parsedFixedPrice)
+        : parsedGrande;
 
       if (editingProduct) {
         await updateProduct(editingProduct.productId, {
@@ -517,15 +563,62 @@ export function AdminDashboard() {
                   </div>
 
                   {isFoodPricingMode ? (
-                    <div>
-                      <label className="text-[12px] text-[#757575] mb-1 block">Price (Fixed)</label>
-                      <input
-                        type="number"
-                        value={form.price || ''}
-                        onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
-                        placeholder="0"
-                        className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
-                      />
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between rounded-[12px] bg-[#F8F8F8] px-3 py-2.5 border border-[rgba(0,0,0,0.06)]">
+                        <div>
+                          <p className="text-[13px] text-[#362415]" style={{ fontWeight: 600 }}>Good for Sharing or Solo</p>
+                          <p className="text-[11px] text-[#757575]">Enable Para Uno / Para Amigos pricing</p>
+                        </div>
+                        <button
+                          onClick={() => setFoodPortionPricingEnabled(v => !v)}
+                          className={`w-12 h-7 rounded-full transition-colors cursor-pointer ${
+                            foodPortionPricingEnabled ? 'bg-[#00704A]' : 'bg-[#E0E0E0]'
+                          }`}
+                        >
+                          <div
+                            className={`w-5 h-5 rounded-full bg-white transition-transform mx-1 ${
+                              foodPortionPricingEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                            style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}
+                          />
+                        </button>
+                      </div>
+
+                      {foodPortionPricingEnabled ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="text-[12px] text-[#757575] mb-1 block">Para Uno (Good for solo)</label>
+                            <input
+                              type="number"
+                              value={foodParaUnoPrice}
+                              onChange={e => setFoodParaUnoPrice(e.target.value)}
+                              placeholder="0"
+                              className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[12px] text-[#757575] mb-1 block">Para Amigos (Good for sharing)</label>
+                            <input
+                              type="number"
+                              value={foodParaAmigosPrice}
+                              onChange={e => setFoodParaAmigosPrice(e.target.value)}
+                              placeholder="0"
+                              className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="text-[12px] text-[#757575] mb-1 block">Price (Fixed)</label>
+                          <input
+                            type="number"
+                            value={form.price || ''}
+                            onChange={e => setForm(f => ({ ...f, price: Number(e.target.value) }))}
+                            placeholder="0"
+                            className="w-full bg-[#F5F5F5] rounded-[12px] px-4 py-3 text-[14px] outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">

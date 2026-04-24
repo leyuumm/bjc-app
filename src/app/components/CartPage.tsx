@@ -75,6 +75,11 @@ export function CartPage() {
                     {item.selectedSizeOz && (
                       <p className="text-[11px] text-[#757575]">Size: {SIZE_LABELS[item.selectedSizeOz]} ({item.selectedSizeOz}oz)</p>
                     )}
+                    {item.selectedFoodPortion && (
+                      <p className="text-[11px] text-[#757575]">
+                        Serving: {item.selectedFoodPortion === 'paraUno' ? 'Para Uno (Good for solo)' : 'Para Amigos (Good for sharing)'}
+                      </p>
+                    )}
                     {item.addOns.length > 0 && (
                       <p className="text-[11px] text-[#00704A]">Add-ons: {item.addOns.map(addOn => addOn.name).join(', ')}</p>
                     )}

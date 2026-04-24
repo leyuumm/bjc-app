@@ -7,6 +7,7 @@ import { LEHMUHN_ADD_ONS, SIZE_LABELS, getAllowedSizesByStoreType } from '../con
 import type {
   AddOnOption,
   CartItem,
+  FoodPortionKey,
   KohFeeMenuGroup,
   KohFeeSubGroup,
   KohfeeProduct,
@@ -49,10 +50,11 @@ function mapCategoryToKohfeeGroups(categoryId?: string): KohFeeMenuGroup[] | und
 function mapProductDocToProduct(doc: ProductDoc): Product {
   const meta = (doc.meta ?? {}) as Record<string, unknown>;
   const priceBySizeOz = (meta.priceBySizeOz as Partial<Record<SizeOz, number>>) ?? undefined;
+  const priceByPortion = (meta.priceByPortion as Partial<Record<FoodPortionKey, number>>) ?? undefined;
   const isBestSeller = (meta.isBestSeller as boolean) ?? (meta.isPremium as boolean) ?? false;
   const isFanFave = (meta.isFanFave as boolean) ?? false;
   const isTrending = (meta.isTrending as boolean) ?? false;
-  const normalizedBasePrice = priceBySizeOz?.[16] ?? doc.price;
+  const normalizedBasePrice = priceByPortion?.paraUno ?? priceBySizeOz?.[16] ?? doc.price;
 
   if (doc.storeId === 'lehmuhn') {
     const categoryDrinkTypes = mapCategoryToLehmuhnTypes(doc.categoryId);
@@ -71,6 +73,7 @@ function mapProductDocToProduct(doc: ProductDoc): Product {
       isFanFave,
       isTrending,
       priceBySizeOz,
+      priceByPortion,
       defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
       defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
       drinkType,
@@ -94,6 +97,7 @@ function mapProductDocToProduct(doc: ProductDoc): Product {
     isFanFave,
     isTrending,
     priceBySizeOz,
+    priceByPortion,
     defaultToppingsLabel: (meta.defaultToppingsLabel as string) ?? undefined,
     defaultToppingsCost: (meta.defaultToppingsCost as number) ?? undefined,
     menuGroup,
@@ -104,6 +108,14 @@ function mapProductDocToProduct(doc: ProductDoc): Product {
 }
 
 function getDisplayPriceLabel(product: Product): string {
+  const paraUnoPrice = product.priceByPortion?.paraUno;
+  const paraAmigosPrice = product.priceByPortion?.paraAmigos;
+  if (paraUnoPrice && paraAmigosPrice) {
+    return `${paraUnoPrice}-${paraAmigosPrice}`;
+  }
+  if (paraUnoPrice) {
+    return String(paraUnoPrice);
+  }
   const grandePrice = product.priceBySizeOz?.[16];
   const extraGrandePrice = product.priceBySizeOz?.[22];
   if (grandePrice && extraGrandePrice) {
@@ -369,13 +381,22 @@ function ProductDetailSheet({
   );
 
   const [sizeOz, setSizeOz] = useState<SizeOz | undefined>(allowedSizes[0]);
+  const hasPortionPricing = Boolean(product.priceByPortion && Object.keys(product.priceByPortion).length > 0);
+  const portionPrices = product.priceByPortion ?? {};
+  const [foodPortion, setFoodPortion] = useState<FoodPortionKey | undefined>(
+    product.priceByPortion?.paraUno
+      ? 'paraUno'
+      : (product.priceByPortion?.paraAmigos ? 'paraAmigos' : undefined),
+  );
   const [quantity, setQuantity] = useState(1);
   const [toppingsRemoved, setToppingsRemoved] = useState(false);
   const [addOns, setAddOns] = useState<AddOnOption[]>([]);
   const [hotOption, setHotOption] = useState(isLehmuhn && product.hotOptions?.length ? product.hotOptions[0] : '');
   const [selectedFruits, setSelectedFruits] = useState<string[]>([]);
 
-  const basePrice = getPriceForSize(product, sizeOz);
+  const basePrice = foodPortion
+    ? (product.priceByPortion?.[foodPortion] ?? product.basePrice)
+    : getPriceForSize(product, sizeOz);
   const toppingsCost = toppingsRemoved ? 0 : (product.defaultToppingsCost ?? 0);
   const addOnsPrice = addOns.reduce((sum, addOn) => sum + addOn.extraCost, 0);
   const totalPrice = (basePrice + toppingsCost + addOnsPrice) * quantity;
@@ -421,6 +442,10 @@ function ProductDetailSheet({
       toast.error('Selected size is not available for this item');
       return;
     }
+    if (hasPortionPricing && !foodPortion) {
+      toast.error('Please select Para Uno or Para Amigos');
+      return;
+    }
     if (!Number.isFinite(basePrice) || basePrice <= 0) {
       toast.error('Product price is not configured correctly');
       return;
@@ -437,6 +462,7 @@ function ProductDetailSheet({
     const signature = [
       product.id,
       sizeOz ?? 'nosize',
+      foodPortion ?? 'noportion',
       isLehmuhn ? selectedType : selectedGroup,
       !isLehmuhn ? activeKohfeeSubGroup : 'nosub',
       hotOption,
@@ -459,6 +485,7 @@ function ProductDetailSheet({
       isFanFave: product.isFanFave,
       isTrending: product.isTrending,
       selectedSizeOz: sizeOz,
+      selectedFoodPortion: foodPortion,
       selectedDrinkType: isLehmuhn ? selectedType : undefined,
       selectedMenuGroup: !isLehmuhn ? selectedGroup : undefined,
       selectedSubGroup: !isLehmuhn && selectedGroup !== 'FOOD' ? activeKohfeeSubGroup : undefined,
@@ -537,6 +564,44 @@ function ProductDetailSheet({
                   <span className="block text-[11px] opacity-70">{size}oz — &#8369;{getPriceForSize(product, size)}</span>
                 </button>
               ))}
+              </div>
+            </div>
+          )}
+
+          {hasPortionPricing && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Serving Option</h4>
+              <div className="flex gap-2">
+                {portionPrices.paraUno && (
+                  <button
+                    onClick={() => setFoodPortion('paraUno')}
+                    className={cn(
+                      'flex-1 py-2.5 rounded-[12px] text-[13px] cursor-pointer border transition-all',
+                      foodPortion === 'paraUno'
+                        ? 'bg-[#00704A] text-white border-[#00704A]'
+                        : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]',
+                    )}
+                    style={{ fontWeight: foodPortion === 'paraUno' ? 600 : 400 }}
+                  >
+                    Para Uno
+                    <span className="block text-[11px] opacity-70">Good for solo - &#8369;{portionPrices.paraUno}</span>
+                  </button>
+                )}
+                {portionPrices.paraAmigos && (
+                  <button
+                    onClick={() => setFoodPortion('paraAmigos')}
+                    className={cn(
+                      'flex-1 py-2.5 rounded-[12px] text-[13px] cursor-pointer border transition-all',
+                      foodPortion === 'paraAmigos'
+                        ? 'bg-[#00704A] text-white border-[#00704A]'
+                        : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]',
+                    )}
+                    style={{ fontWeight: foodPortion === 'paraAmigos' ? 600 : 400 }}
+                  >
+                    Para Amigos
+                    <span className="block text-[11px] opacity-70">Good for sharing - &#8369;{portionPrices.paraAmigos}</span>
+                  </button>
+                )}
               </div>
             </div>
           )}
