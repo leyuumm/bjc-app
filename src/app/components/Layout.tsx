@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router';
+import { Capacitor } from '@capacitor/core';
+import { App as CapacitorApp } from '@capacitor/app';
 import { BottomNav } from './BottomNav';
 import { useAppContext } from './AppContext';
 import { NotificationPanel } from './NotificationPanel';
 import { Bell, Loader2 } from 'lucide-react';
 
 export function Layout() {
-  const { firebaseUser, userProfile, unreadNotificationsCount, authLoading } = useAppContext();
+  const { firebaseUser, userProfile, unreadNotificationsCount, unreadAnnouncementsCount, markAnnouncementsAsSeen, authLoading } = useAppContext();
   const location = useLocation();
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
+  const totalUnreadCount = unreadNotificationsCount + unreadAnnouncementsCount;
 
   const role = userProfile?.role ?? 'CUSTOMER';
   const cashierBranchPath = '/cashier/select-branch';
@@ -50,6 +53,35 @@ export function Layout() {
     }
   }, [role, location.pathname, firebaseUser, navigate, cashierBranchPath, cashierBranchId, cashierStoreId, authLoading]);
 
+  // Android hardware back button support (native only).
+  useEffect(() => {
+    if (Capacitor.getPlatform() !== 'android') return;
+
+    let isHandlingBack = false;
+    const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (isHandlingBack) return;
+      isHandlingBack = true;
+
+      if (canGoBack && window.history.length > 1) {
+        navigate(-1);
+      } else if (role === 'CASHIER') {
+        navigate('/cashier/select-branch');
+      } else if (role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
+
+      setTimeout(() => {
+        isHandlingBack = false;
+      }, 150);
+    });
+
+    return () => {
+      listenerPromise.then(listener => listener.remove());
+    };
+  }, [navigate, role]);
+
   if (authLoading) {
     return (
       <div className="flex justify-center bg-[#F0F0F0] min-h-screen">
@@ -70,14 +102,17 @@ export function Layout() {
         {/* Bell icon for notifications (customer only) */}
         {role === 'CUSTOMER' && (
           <button
-            onClick={() => setShowNotifications(true)}
+            onClick={() => {
+              markAnnouncementsAsSeen();
+              setShowNotifications(true);
+            }}
             className="fixed top-3 right-[calc(50%-190px)] z-[55] w-10 h-10 rounded-full bg-white flex items-center justify-center cursor-pointer"
             style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
           >
             <Bell size={20} color="#362415" />
-            {unreadNotificationsCount > 0 && (
+            {totalUnreadCount > 0 && (
               <span className="absolute -top-0.5 -right-0.5 w-5 h-5 rounded-full bg-[#D32F2F] text-white text-[11px] flex items-center justify-center" style={{ fontWeight: 600 }}>
-                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
               </span>
             )}
           </button>

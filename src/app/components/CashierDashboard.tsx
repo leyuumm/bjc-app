@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { Clock, ChefHat, Coffee, CheckCircle2, ArrowRight, Loader2, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppContext } from './AppContext';
 import { SIZE_LABELS } from '../config/menuRules';
 import {
@@ -16,7 +17,7 @@ import { mapOrderDocToOrder } from '../utils/mappers';
 
 const localStatusToFirestore: Record<string, OrderStatusEnum> = {
   waiting_for_arrival: 'Pending',
-  preparing: 'In Progress',
+  preparing: 'Preparing',
   ready: 'Ready',
   completed: 'Completed',
   payment_failed: 'Cancelled',
@@ -77,6 +78,7 @@ export function CashierDashboard() {
     }, (error) => {
       clearTimeout(timeoutId);
       console.error('Cashier orders snapshot error:', error);
+      toast.error('Failed to sync realtime orders for this branch/store.');
       setLoading(false);
     });
     return () => {
@@ -112,20 +114,25 @@ export function CashierDashboard() {
   const handleUpdateStatus = async (orderId: string, newLocalStatus: OrderStatus) => {
     const firestoreStatus = localStatusToFirestore[newLocalStatus];
     if (!firestoreStatus) return;
-    await updateFirestoreOrderStatus(orderId, firestoreStatus);
+    try {
+      await updateFirestoreOrderStatus(orderId, firestoreStatus);
 
-    // Find the order doc to get userId
-    const orderDoc = orderDocs.find(d => d.orderId === orderId);
-    if (orderDoc) {
-      const messages: Record<string, string> = {
-        preparing: `Your order #${orderId} is now being prepared!`,
-        ready: `Your order #${orderId} is ready for pickup!`,
-        completed: `Your order #${orderId} has been completed. Thank you!`,
-      };
-      const msg = messages[newLocalStatus];
-      if (msg) {
-        sendNotification(orderDoc.userId, msg);
+      // Find the order doc to get userId
+      const orderDoc = orderDocs.find(d => d.orderId === orderId);
+      if (orderDoc) {
+        const messages: Record<string, string> = {
+          preparing: `Your order #${orderId} is now being prepared!`,
+          ready: `Your order #${orderId} is ready for pickup!`,
+          completed: `Your order #${orderId} has been completed. Thank you!`,
+        };
+        const msg = messages[newLocalStatus];
+        if (msg) {
+          await sendNotification(orderDoc.userId, msg);
+        }
       }
+    } catch (error) {
+      console.error('Failed to update order status/notification:', error);
+      toast.error('Failed to update status / notification. Please check network or permissions.');
     }
   };
 
@@ -264,6 +271,8 @@ export function CashierDashboard() {
                       {item.quantity}x {item.name}
                       {item.selectedSizeOz ? ` (${SIZE_LABELS[item.selectedSizeOz]} ${item.selectedSizeOz}oz)` : ''}
                       {item.selectedFoodPortion ? ` (${item.selectedFoodPortion === 'paraUno' ? 'Para Uno' : 'Para Amigos'})` : ''}
+                      {item.selectedDrinkType === 'HOT' || item.selectedDrinkType === 'COLD' ? ` (${item.selectedDrinkType})` : ''}
+                      {item.selectedMenuGroup === 'HOT' || item.selectedMenuGroup === 'COLD' ? ` (${item.selectedMenuGroup})` : ''}
                     </span>
                   </div>
                 ))}

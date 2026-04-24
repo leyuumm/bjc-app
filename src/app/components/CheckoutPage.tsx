@@ -44,6 +44,11 @@ export function CheckoutPage() {
       return;
     }
 
+    if (!firebaseUser) {
+      setValidationError('Please log in again before placing an order.');
+      return;
+    }
+
     setValidationError('');
     setSubmitting(true);
 
@@ -63,6 +68,41 @@ export function CheckoutPage() {
             name: item.selectedFoodPortion === 'paraUno' ? 'Para Uno' : 'Para Amigos',
             optionType: 'portion',
             optionValue: item.selectedFoodPortion,
+            extraCost: 0,
+          });
+        }
+        if (item.selectedDrinkType) {
+          customizations.push({
+            optionId: `drinkType-${item.selectedDrinkType}`,
+            productId: item.productId,
+            name: 'Drink Type',
+            optionType: 'drinkType',
+            optionValue: item.selectedDrinkType,
+            extraCost: 0,
+          });
+        }
+        if (item.selectedMenuGroup) {
+          customizations.push({
+            optionId: `menuGroup-${item.selectedMenuGroup}`,
+            productId: item.productId,
+            name: 'Menu Group',
+            optionType: 'menuGroup',
+            optionValue: item.selectedMenuGroup,
+            extraCost: 0,
+          });
+        }
+        const temperature = item.selectedDrinkType === 'HOT' || item.selectedDrinkType === 'COLD'
+          ? item.selectedDrinkType
+          : item.selectedMenuGroup === 'HOT' || item.selectedMenuGroup === 'COLD'
+            ? item.selectedMenuGroup
+            : null;
+        if (temperature) {
+          customizations.push({
+            optionId: `temperature-${temperature}`,
+            productId: item.productId,
+            name: 'Temperature',
+            optionType: 'temperature',
+            optionValue: temperature,
             extraCost: 0,
           });
         }
@@ -108,61 +148,79 @@ export function CheckoutPage() {
     const userId = firebaseUser?.uid ?? '';
     const customerName = userProfile?.name ?? 'Customer';
 
-    // Write to Firestore
-    const orderDoc = await createOrder(
-      userId,
-      selectedBranch!,
-      selectedBrand!,
-      mapCartToOrderItems(cart),
-      subtotal,
-      paymentMethod,
-      paymentStatus,
-      customerName,
-      orderType === 'advance' ? 'Advance Order' : 'On-site',
-    );
+    try {
+      // Write to Firestore (single source of truth for realtime flows)
+      const orderDoc = await createOrder(
+        userId,
+        selectedBranch!,
+        selectedBrand!,
+        mapCartToOrderItems(cart),
+        subtotal,
+        paymentMethod,
+        paymentStatus,
+        customerName,
+        orderType === 'advance' ? 'Advance Order' : 'On-site',
+      );
 
-    const orderId = orderDoc.orderId;
+      const orderId = orderDoc.orderId;
 
-    // Send notification
-    if (userId && paymentStatus !== 'FAILED') {
-      sendNotification(userId, `Your order #${orderId} has been placed!`);
-    }
-
-    // Award loyalty points
-    if (firebaseUser && paymentStatus !== 'FAILED') {
-      const earned = Math.floor(subtotal / 10);
-      if (earned > 0) {
+      // Send notification (non-blocking for order completion)
+      if (userId && paymentStatus !== 'FAILED') {
         try {
-          const currentPoints = await getLoyaltyPoints(firebaseUser.uid);
-          const newTotal = currentPoints + earned;
-          await updateLoyaltyPoints(firebaseUser.uid, newTotal);
-          setLoyaltyPoints(newTotal);
-          toast.success(`You earned ${earned} loyalty points! 🌟`);
-        } catch {
-          // Non-blocking — don't fail the order for loyalty points
+          await sendNotification(userId, `Your order #${orderId} has been placed!`);
+        } catch (notifyError) {
+          console.error('Failed to create placement notification:', notifyError);
         }
       }
+
+      // Award loyalty points
+      if (paymentStatus !== 'FAILED') {
+        const earned = Math.floor(subtotal / 10);
+        if (earned > 0) {
+          try {
+            const currentPoints = await getLoyaltyPoints(firebaseUser.uid);
+            const newTotal = currentPoints + earned;
+            await updateLoyaltyPoints(firebaseUser.uid, newTotal);
+            setLoyaltyPoints(newTotal);
+            toast.success(`You earned ${earned} loyalty points! 🌟`);
+          } catch {
+            // Non-blocking — don't fail the order for loyalty points
+          }
+        }
+      }
+
+      // Keep local status aligned with Firestore-created Pending status.
+      addOrder({
+        id: orderId,
+        items: cart,
+        total: subtotal,
+        status: paymentStatus === 'FAILED' ? 'payment_failed' : 'waiting_for_arrival',
+        time: displayTime,
+        customerName,
+        orderType: orderType === 'advance' ? 'Advance Order' : 'On-site',
+        paymentMethod,
+        paymentStatus,
+        statusMessage: paymentStatus === 'FAILED'
+          ? 'Online payment failed. Please try again or switch to Pay at Store.'
+          : 'Prepare once you arrived in the store',
+      });
+
+      if (paymentStatus !== 'FAILED') {
+        clearCart();
+      }
+
+      navigate('/order-tracking/' + orderId);
+    } catch (error) {
+      console.error('Failed to place order:', {
+        error,
+        userId,
+        selectedBranch,
+        selectedBrand,
+      });
+      toast.error('Failed to place order. Please check your internet or Firestore permissions.');
+    } finally {
+      setSubmitting(false);
     }
-
-    addOrder({
-      id: orderId,
-      items: cart,
-      total: subtotal,
-      status,
-      time: displayTime,
-      customerName,
-      orderType: orderType === 'advance' ? 'Advance Order' : 'On-site',
-      paymentMethod,
-      paymentStatus,
-      statusMessage,
-    });
-
-    if (paymentStatus !== 'FAILED') {
-      clearCart();
-    }
-
-    setSubmitting(false);
-    navigate('/order-tracking/' + orderId);
   };
 
   return (

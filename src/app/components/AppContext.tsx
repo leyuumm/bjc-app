@@ -31,6 +31,8 @@ interface AppState {
   notifications: NotificationDoc[];
   unreadNotificationsCount: number;
   announcements: AnnouncementDoc[];
+  unreadAnnouncementsCount: number;
+  markAnnouncementsAsSeen: () => void;
   resetState: () => void;
 }
 
@@ -48,8 +50,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementDoc[]>([]);
+  const [lastSeenAnnouncementTimestamp, setLastSeenAnnouncementTimestamp] = useState<number>(0);
 
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
+  const unreadAnnouncementsCount = announcements.filter((announcement) => {
+    const rawTimestamp = announcement.timestamp as unknown;
+    const announcementTime = rawTimestamp instanceof Date
+      ? rawTimestamp.getTime()
+      : (rawTimestamp && typeof rawTimestamp === 'object' && 'toDate' in rawTimestamp)
+        ? (rawTimestamp as { toDate: () => Date }).toDate().getTime()
+        : 0;
+    return announcementTime > lastSeenAnnouncementTimestamp;
+  }).length;
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -62,6 +74,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (profile) {
           setLoyaltyPoints(profile.loyaltyPoints);
         }
+        const storedSeenTs = window.localStorage.getItem(`announcements-last-seen:${user.uid}`);
+        setLastSeenAnnouncementTimestamp(storedSeenTs ? Number(storedSeenTs) : 0);
       } else {
         setIsLoggedIn(false);
         setUserProfile(null);
@@ -69,6 +83,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setOrders([]);
         setNotifications([]);
         setAnnouncements([]);
+        setLastSeenAnnouncementTimestamp(0);
       }
       setAuthLoading(false);
     });
@@ -145,6 +160,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const markAnnouncementsAsSeen = () => {
+    if (!firebaseUser) return;
+    const latestTimestamp = announcements.reduce((maxTs, announcement) => {
+      const rawTimestamp = announcement.timestamp as unknown;
+      const announcementTime = rawTimestamp instanceof Date
+        ? rawTimestamp.getTime()
+        : (rawTimestamp && typeof rawTimestamp === 'object' && 'toDate' in rawTimestamp)
+          ? (rawTimestamp as { toDate: () => Date }).toDate().getTime()
+          : 0;
+      return Math.max(maxTs, announcementTime);
+    }, 0);
+    if (!latestTimestamp) return;
+    setLastSeenAnnouncementTimestamp(latestTimestamp);
+    window.localStorage.setItem(`announcements-last-seen:${firebaseUser.uid}`, String(latestTimestamp));
+  };
+
   return (
     <AppContext.Provider value={{
       selectedBrand, setSelectedBrand,
@@ -155,7 +186,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isLoggedIn, setIsLoggedIn,
       firebaseUser, userProfile, updateUserProfileLocal, authLoading,
       notifications, unreadNotificationsCount,
-      announcements,
+      announcements, unreadAnnouncementsCount, markAnnouncementsAsSeen,
       resetState,
     }}>
       {children}

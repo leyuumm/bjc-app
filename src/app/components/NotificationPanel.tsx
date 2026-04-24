@@ -28,7 +28,9 @@ function formatTimestamp(ts: Date | unknown): string {
 }
 
 export function NotificationPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { notifications, announcements } = useAppContext();
+  const { notifications, announcements, unreadAnnouncementsCount } = useAppContext();
+  const unreadOrderNotificationsCount = notifications.filter(n => !n.isRead).length;
+  const totalUnreadCount = unreadOrderNotificationsCount + unreadAnnouncementsCount;
 
   const handleMarkRead = async (notificationId: string) => {
     await markNotificationAsRead(notificationId);
@@ -66,7 +68,7 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
               <div>
                 <h2 className="text-[20px] text-[#362415]" style={{ fontWeight: 700 }}>Notifications</h2>
                 <p className="text-[12px] text-[#757575]">
-                  {notifications.filter(n => !n.isRead).length} unread
+                  {totalUnreadCount} unread
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -105,6 +107,11 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
                         <p className="text-[12px] text-[#757575] uppercase tracking-wide" style={{ fontWeight: 600 }}>
                           What's New
                         </p>
+                        {unreadAnnouncementsCount > 0 && (
+                          <span className="text-[11px] text-[#F59E0B]" style={{ fontWeight: 600 }}>
+                            {unreadAnnouncementsCount} new
+                          </span>
+                        )}
                       </div>
                       <div className="divide-y divide-[rgba(0,0,0,0.06)]">
                         {announcements.map((ann, i) => (

@@ -22,6 +22,8 @@ import { onProductsSnapshot } from '../services/firestore';
 import { cn } from './ui/utils';
 import { toast } from 'sonner';
 
+type TemperatureChoice = 'HOT' | 'COLD';
+
 function normalizeCategoryId(categoryId?: string): string {
   return (categoryId ?? '').trim().toLowerCase();
 }
@@ -365,19 +367,35 @@ function ProductDetailSheet({
   onAddToCart: (item: CartItem) => void;
 }) {
   const isLehmuhn = product.storeId === 'lehmuhn';
+  const lehmuhnAllowedTypes = isLehmuhn ? (product.allowedDrinkTypes ?? [product.drinkType]) : [];
+  const kohfeeAllowedGroups = !isLehmuhn ? (product.allowedMenuGroups ?? [product.menuGroup]) : [];
   const selectedType = isLehmuhn
-    ? ((product.allowedDrinkTypes ?? [product.drinkType]).includes(activeLehmuhnType)
+    ? (lehmuhnAllowedTypes.includes(activeLehmuhnType)
       ? activeLehmuhnType
       : product.drinkType)
     : undefined;
   const selectedGroup = !isLehmuhn
-    ? ((product.allowedMenuGroups ?? [product.menuGroup]).includes(activeKohfeeGroup)
+    ? (kohfeeAllowedGroups.includes(activeKohfeeGroup)
       ? activeKohfeeGroup
       : product.menuGroup)
     : undefined;
+  const supportsTemperatureChoice = isLehmuhn
+    ? lehmuhnAllowedTypes.includes('HOT') && lehmuhnAllowedTypes.includes('COLD')
+    : kohfeeAllowedGroups.includes('HOT') && kohfeeAllowedGroups.includes('COLD');
+  const [temperatureChoice, setTemperatureChoice] = useState<TemperatureChoice>(
+    isLehmuhn
+      ? (((selectedType ?? 'COLD') === 'HOT' || (selectedType ?? 'COLD') === 'COLD') ? selectedType as TemperatureChoice : 'COLD')
+      : (((selectedGroup ?? 'COLD') === 'HOT' || (selectedGroup ?? 'COLD') === 'COLD') ? selectedGroup as TemperatureChoice : 'COLD'),
+  );
+  const effectiveLehmuhnType: LehMuhnDrinkType | undefined = isLehmuhn
+    ? (supportsTemperatureChoice ? temperatureChoice : selectedType)
+    : undefined;
+  const effectiveKohfeeGroup: KohFeeMenuGroup | undefined = !isLehmuhn
+    ? (supportsTemperatureChoice ? temperatureChoice : selectedGroup)
+    : undefined;
   const allowedSizes = getAllowedSizesByStoreType(
     product.storeId,
-    isLehmuhn ? (selectedType as LehMuhnDrinkType) : (selectedGroup as KohFeeMenuGroup),
+    isLehmuhn ? (effectiveLehmuhnType as LehMuhnDrinkType) : (effectiveKohfeeGroup as KohFeeMenuGroup),
   );
 
   const [sizeOz, setSizeOz] = useState<SizeOz | undefined>(allowedSizes[0]);
@@ -393,6 +411,16 @@ function ProductDetailSheet({
   const [addOns, setAddOns] = useState<AddOnOption[]>([]);
   const [hotOption, setHotOption] = useState(isLehmuhn && product.hotOptions?.length ? product.hotOptions[0] : '');
   const [selectedFruits, setSelectedFruits] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (allowedSizes.length === 0) {
+      setSizeOz(undefined);
+      return;
+    }
+    if (!sizeOz || !allowedSizes.includes(sizeOz)) {
+      setSizeOz(allowedSizes[0]);
+    }
+  }, [allowedSizes, sizeOz]);
 
   const basePrice = foodPortion
     ? (product.priceByPortion?.[foodPortion] ?? product.basePrice)
@@ -464,6 +492,7 @@ function ProductDetailSheet({
       sizeOz ?? 'nosize',
       foodPortion ?? 'noportion',
       isLehmuhn ? selectedType : selectedGroup,
+      supportsTemperatureChoice ? temperatureChoice : 'notemp',
       !isLehmuhn ? activeKohfeeSubGroup : 'nosub',
       hotOption,
       toppingsRemoved ? 'remove_toppings' : 'keep_toppings',
@@ -486,8 +515,8 @@ function ProductDetailSheet({
       isTrending: product.isTrending,
       selectedSizeOz: sizeOz,
       selectedFoodPortion: foodPortion,
-      selectedDrinkType: isLehmuhn ? selectedType : undefined,
-      selectedMenuGroup: !isLehmuhn ? selectedGroup : undefined,
+      selectedDrinkType: isLehmuhn ? effectiveLehmuhnType : undefined,
+      selectedMenuGroup: !isLehmuhn ? effectiveKohfeeGroup : undefined,
       selectedSubGroup: !isLehmuhn && selectedGroup !== 'FOOD' ? activeKohfeeSubGroup : undefined,
       addOns,
       toppingsRemoved,
@@ -543,6 +572,29 @@ function ProductDetailSheet({
           <h2 className="text-[22px] text-[#362415]" style={{ fontWeight: 700 }}>{product.name}</h2>
           <p className="text-[14px] text-[#757575] mt-1">{product.description}</p>
           <p className="text-[20px] text-[#00704A] mt-2" style={{ fontWeight: 700 }}>&#8369;{basePrice}</p>
+
+          {supportsTemperatureChoice && (
+            <div className="mt-5">
+              <h4 className="text-[14px] text-[#362415] mb-2" style={{ fontWeight: 600 }}>Temperature</h4>
+              <div className="flex gap-2">
+                {(['HOT', 'COLD'] as TemperatureChoice[]).map((temp) => (
+                  <button
+                    key={temp}
+                    onClick={() => setTemperatureChoice(temp)}
+                    className={cn(
+                      'flex-1 py-2.5 rounded-[12px] text-[13px] cursor-pointer border transition-all',
+                      temperatureChoice === temp
+                        ? 'bg-[#00704A] text-white border-[#00704A]'
+                        : 'bg-white text-[#362415] border-[rgba(0,0,0,0.12)]',
+                    )}
+                    style={{ fontWeight: temperatureChoice === temp ? 600 : 400 }}
+                  >
+                    {temp}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Size */}
           {allowedSizes.length > 0 && (

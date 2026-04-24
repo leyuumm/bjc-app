@@ -18,13 +18,15 @@ export const MENU_SIZE_RULES: {
 } = {
   lehmuhn: {
     COLD: [16, 22],
-    HOT: [16, 22],
+    // CEO rule: Extra Grande (22oz) is cold-only.
+    HOT: [16],
     BLENDED: [16, 22],
     SPARKLING: [16, 22],
   },
   kohfee: {
     COLD: [16, 22],
-    HOT: [16, 22],
+    // CEO rule: Extra Grande (22oz) is cold-only.
+    HOT: [16],
     BLENDED: [16, 22],
     FOOD: [],
   },

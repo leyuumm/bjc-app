@@ -54,7 +54,7 @@ service cloud.firestore {
     }
 
     function isValidOrderStatus(status) {
-      return status in ['Pending', 'Preparing', 'Ready', 'Completed', 'Cancelled'];
+      return status in ['Pending', 'Preparing', 'In Progress', 'Ready', 'Completed', 'Cancelled'];
     }
 
     function isValidStoreId(storeId) {
@@ -200,13 +200,13 @@ service cloud.firestore {
 
     // ─── Notifications ──────────────────────────────────────────────
     // Users can only read their own notifications.
-    // Only admins can create for other users. Users create only for themselves.
+    // Cashiers/admins can create customer notifications. Users can create only for themselves.
 
     match /notifications/{notificationId} {
       allow read: if isAuthenticated() && isOwner(resource.data.userId);
-      // Create: admins can notify any user; users can only create their own.
+      // Create: cashiers/admins can notify any user; users can only create their own.
       allow create: if isAuthenticated() &&
-        (isAdmin() || request.resource.data.userId == request.auth.uid) &&
+        (isCashier() || request.resource.data.userId == request.auth.uid) &&
         request.resource.data.userId is string &&
         request.resource.data.userId.size() > 0 &&
         request.resource.data.message is string &&

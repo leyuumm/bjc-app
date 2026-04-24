@@ -4,6 +4,7 @@ import type { CartItem, StoreId } from '../types/menu';
 
 const orderDocStatusToLocal: Record<OrderStatusEnum, OrderStatus> = {
   'Pending': 'waiting_for_arrival',
+  'Preparing': 'preparing',
   'In Progress': 'preparing',
   'Ready': 'ready',
   'Completed': 'completed',
@@ -20,12 +21,14 @@ export function mapOrderDocToOrder(d: OrderDoc): Order {
     payment_failed: 'Online payment failed. Please try again or switch to Pay at Store.',
   };
 
+  const storeId = (d.storeId ?? 'lehmuhn') as StoreId;
+
   return {
     id: d.orderId,
     items: d.orderDetails.map(item => ({
       cartItemId: item.orderItemId,
       productId: item.productId,
-      storeId: 'lehmuhn' as StoreId,
+      storeId,
       name: item.customizations.find(c => c.optionType === 'productName')?.optionValue ?? item.productId,
       description: '',
       image: item.customizations.find(c => c.optionType === 'image')?.optionValue ?? '',
@@ -37,6 +40,14 @@ export function mapOrderDocToOrder(d: OrderDoc): Order {
         : undefined,
       selectedFoodPortion: item.customizations.find(c => c.optionType === 'portion')
         ? item.customizations.find(c => c.optionType === 'portion')!.optionValue as CartItem['selectedFoodPortion']
+        : undefined,
+      selectedDrinkType: storeId === 'lehmuhn'
+        ? (item.customizations.find(c => c.optionType === 'drinkType')?.optionValue
+          ?? item.customizations.find(c => c.optionType === 'temperature')?.optionValue) as CartItem['selectedDrinkType']
+        : undefined,
+      selectedMenuGroup: storeId === 'kohfee'
+        ? (item.customizations.find(c => c.optionType === 'menuGroup')?.optionValue
+          ?? item.customizations.find(c => c.optionType === 'temperature')?.optionValue) as CartItem['selectedMenuGroup']
         : undefined,
       addOns: item.customizations.filter(c => c.optionType === 'addOn').map(c => ({
         id: c.optionId,

@@ -57,7 +57,7 @@ export interface ProductDoc {
   meta?: Record<string, unknown>;
 }
 
-export type OrderStatusEnum = 'Pending' | 'In Progress' | 'Ready' | 'Completed' | 'Cancelled';
+export type OrderStatusEnum = 'Pending' | 'Preparing' | 'In Progress' | 'Ready' | 'Completed' | 'Cancelled';
 
 export interface OrderItemDoc {
   orderItemId: string;
