@@ -46,7 +46,7 @@ export function StoreSelection() {
               <Citrus size={24} color="#00704A" />
             </div>
             <div>
-              <h2 className="text-[18px] text-[#362415]" style={{ fontWeight: 700 }}>Leh-muhn Juices & Tea</h2>
+              <h2 className="text-[18px] text-[#362415]" style={{ fontWeight: 700 }}>leh-muhn Juices & Tea</h2>
               <p className="text-[13px] text-[#757575]">Fresh juices, teas & smoothies</p>
             </div>
           </div>
